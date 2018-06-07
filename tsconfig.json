@@ -2,7 +2,15 @@
 	"compilerOptions": {
 		"strict": true,
 		"moduleResolution": "node",
-		"target": "esnext",
-		"allowJs": true
-	}
+		"target": "es5",
+		"allowJs": true,
+		"lib": [
+			"es2015",
+			"es2015.promise",
+			"es2016"
+		]
+	},
+	"include": [
+		"./main.ts"
+	]
 }
