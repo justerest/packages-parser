@@ -81,6 +81,7 @@ function parsePkgJson(path) {
                     if (dependencies) {
                         return [2 /*return*/, dependencies
                                 .map(function (dirtyDepStr) { return dirtyDepStr.slice(15, -1); })
+                                .filter(Boolean)
                                 .join(',')
                                 .split(',')];
                     }
@@ -109,7 +110,7 @@ function getUnique(dependencies) {
     return Array.from(new Set(dependencies));
 }
 function updateVersions(dependency) {
-    return dependency.replace(/:"(.\d*\.\d*\.\d*|\w*)"/g, ': "latest"');
+    return dependency.replace(/:"([a-z0-9^.@\/\-,]*)"/g, ': "latest"');
 }
 function toPkgJsonFormat(dependencies) {
     return JSON.stringify(JSON.parse("{\"dependencies\":{" + dependencies + "}}"), null, 2);

@@ -28,6 +28,7 @@ async function parsePkgJson(path: string) {
     if (dependencies) {
       return dependencies
         .map((dirtyDepStr) => dirtyDepStr.slice(15, -1))
+        .filter(Boolean)
         .join(',')
         .split(',');
     }
@@ -56,7 +57,7 @@ function getUnique(dependencies: string[]) {
 }
 
 function updateVersions(dependency: string) {
-  return dependency.replace(/:"(.\d*\.\d*\.\d*|\w*)"/g, ': "latest"');
+  return dependency.replace(/:"([a-z0-9^.@\/\-,]*)"/g, ': "latest"');
 }
 
 function toPkgJsonFormat(dependencies: string[]) {
