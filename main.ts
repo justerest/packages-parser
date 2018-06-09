@@ -2,79 +2,67 @@ import chalk from 'chalk';
 import { readFileSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 
-const ARGS = process.argv.slice(2);
+const DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 
 (async function main() {
-  const files = ARGS.length
-    ? ARGS.map(parseDependencies)
-    : [parseDependencies('./package.json')];
+  const args = process.argv.slice(2);
+  args.push('./dist/package.json');
 
-  const allDeps = await Promise.all(files);
+  const allDeps: string[][] = await Promise.all(args.map(parsePkgJson));
+  const list = getUnique(flatten(allDeps).map(updateVersions)).sort();
 
-  const list = allDeps.join('\n')
-    .replace(/\n\n/g, '\n')
-    .replace(/:(.\d*\.\d*\.\d*|\w*)/g, '')
-    .replace(/,/g, '\n')
-    .split('\n');
-
-  const uniqueList = Array.from(new Set(list));
-
-  const result = uniqueList
-    .sort()
-    .map((s) => s + ';Последняя версия')
-    .map((s) => s + ';Сообщество разработчиков')
-    .map((s) => s + ';\\\\orgName')
-    .map((s) => s + ';децентрализованная')
-    .map((s) => s + ';\\\\orgName')
-    .map((s) => s + ';\\\\orgName')
-    .map((s) => s + ';нет')
-    .map((s) => s + ';нет')
-    .map((s) => s + ';сегмент разработки ЛВС \\\\orgName')
-    .map(addSite)
-    .map((s) => s + ';Производителем не установлен')
-    .map((s) => s + ';Средство для web-разработки')
-    .map((s) => s + ';\\\\orgName')
-    .map((s) => s + ';\\\\docNumber')
-    .join('\n');
-
-  writeFileSync('./parsed-packages.csv', result);
-  console.log(chalk.greenBright(`Completed. Load ${uniqueList.length}`));
+  writeFileSync('./dist/package.json', toPkgJsonFormat(list));
+  console.log(chalk.greenBright(`Completed. Dependencies count: ${list.length}`));
 })();
 
-async function parseDependencies(path: string): Promise<string> {
+async function parsePkgJson(path: string) {
   try {
     const text = path.match(/^http/i)
       ? await getPkgJsonFromGithub(path)
       : readFileSync(path, 'utf-8');
 
-    const dirtyList = text
-      .replace(/(\n|\s|")/g, '')
-      .match(/dependencies:{[a-z0-9:^.@\/\-,]*}/gi);
+    const dependencies = text
+      .replace(/(\n|\s)/g, '')
+      .match(DEPS_REGEXP);
 
-    if (dirtyList) {
-      return dirtyList.map((dirtyDepStr) => dirtyDepStr.slice(14, -1)).join(',');
+    if (dependencies) {
+      return dependencies
+        .map((dirtyDepStr) => dirtyDepStr.slice(15, -1))
+        .join(',')
+        .split(',');
     }
     else {
-      warnNotFound(path);
-      return '';
+      warn(`Dependencies fields not found in ${path}`);
+      return [];
     }
   }
   catch (e) {
-    warnNotFound(path);
-    return '';
+    warn(`package.json not found in ${path}`);
+    return [];
   }
 }
 
-function getPkgJsonFromGithub(projectPath: string): Promise<string> {
-  const link = projectPath.replace('github', 'raw.githubusercontent') + '/master/package.json';
+function flatten<T>(doubleArr: T[][]) {
+  return doubleArr.reduce((flatArr, arr) => flatArr.concat(arr), []);
+}
+
+function getPkgJsonFromGithub(path: string): Promise<string> {
+  const link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
   return fetch(link).then((res) => res.text());
 }
 
-function addSite(pkgInfo: string) {
-  const [name] = pkgInfo.split(';');
-  return pkgInfo + ';https://www.npmjs.com/package/' + name;
+function getUnique(dependencies: string[]) {
+  return Array.from(new Set(dependencies));
 }
 
-function warnNotFound(path: string) {
-  console.warn(chalk.yellow(`Dependencies fields not found in ${path}`));
+function updateVersions(dependency: string) {
+  return dependency.replace(/:"(.\d*\.\d*\.\d*|\w*)"/g, ': "latest"');
+}
+
+function toPkgJsonFormat(dependencies: string[]) {
+  return JSON.stringify(JSON.parse(`{"dependencies":{${dependencies}}}`), null, 2);
+}
+
+function warn(message: string) {
+  console.warn(chalk.yellow(message));
 }

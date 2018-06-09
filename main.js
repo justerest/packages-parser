@@ -38,52 +38,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
-var ARGS = process.argv.slice(2);
+var DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var files, allDeps, list, uniqueList, result;
+        var args, allDeps, list;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    files = ARGS.length
-                        ? ARGS.map(parseDependencies)
-                        : [parseDependencies('./package.json')];
-                    return [4 /*yield*/, Promise.all(files)];
+                    args = process.argv.slice(2);
+                    args.push('./dist/package.json');
+                    return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 1:
                     allDeps = _a.sent();
-                    list = allDeps.join('\n')
-                        .replace(/\n\n/g, '\n')
-                        .replace(/:(.\d*\.\d*\.\d*|\w*)/g, '')
-                        .replace(/,/g, '\n')
-                        .split('\n');
-                    uniqueList = Array.from(new Set(list));
-                    result = uniqueList
-                        .sort()
-                        .map(function (s) { return s + ';Последняя версия'; })
-                        .map(function (s) { return s + ';Сообщество разработчиков'; })
-                        .map(function (s) { return s + ';\\\\orgName'; })
-                        .map(function (s) { return s + ';децентрализованная'; })
-                        .map(function (s) { return s + ';\\\\orgName'; })
-                        .map(function (s) { return s + ';\\\\orgName'; })
-                        .map(function (s) { return s + ';нет'; })
-                        .map(function (s) { return s + ';нет'; })
-                        .map(function (s) { return s + ';сегмент разработки ЛВС \\\\orgName'; })
-                        .map(addSite)
-                        .map(function (s) { return s + ';Производителем не установлен'; })
-                        .map(function (s) { return s + ';Средство для web-разработки'; })
-                        .map(function (s) { return s + ';\\\\orgName'; })
-                        .map(function (s) { return s + ';\\\\docNumber'; })
-                        .join('\n');
-                    fs_1.writeFileSync('./parsed-packages.csv', result);
-                    console.log(chalk_1.default.greenBright("Completed. Load " + uniqueList.length));
+                    list = getUnique(flatten(allDeps).map(updateVersions)).sort();
+                    fs_1.writeFileSync('./dist/package.json', toPkgJsonFormat(list));
+                    console.log(chalk_1.default.greenBright("Completed. Dependencies count: " + list.length));
                     return [2 /*return*/];
             }
         });
     });
 })();
-function parseDependencies(path) {
+function parsePkgJson(path) {
     return __awaiter(this, void 0, void 0, function () {
-        var text, _a, dirtyList, e_1;
+        var text, _a, dependencies, e_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -98,34 +75,45 @@ function parseDependencies(path) {
                     _b.label = 3;
                 case 3:
                     text = _a;
-                    dirtyList = text
-                        .replace(/(\n|\s|")/g, '')
-                        .match(/dependencies:{[a-z0-9:^.@\/\-,]*}/gi);
-                    if (dirtyList) {
-                        return [2 /*return*/, dirtyList.map(function (dirtyDepStr) { return dirtyDepStr.slice(14, -1); }).join(',')];
+                    dependencies = text
+                        .replace(/(\n|\s)/g, '')
+                        .match(DEPS_REGEXP);
+                    if (dependencies) {
+                        return [2 /*return*/, dependencies
+                                .map(function (dirtyDepStr) { return dirtyDepStr.slice(15, -1); })
+                                .join(',')
+                                .split(',')];
                     }
                     else {
-                        warnNotFound(path);
-                        return [2 /*return*/, ''];
+                        warn("Dependencies fields not found in " + path);
+                        return [2 /*return*/, []];
                     }
                     return [3 /*break*/, 5];
                 case 4:
                     e_1 = _b.sent();
-                    warnNotFound(path);
-                    return [2 /*return*/, ''];
+                    warn("package.json not found in " + path);
+                    return [2 /*return*/, []];
                 case 5: return [2 /*return*/];
             }
         });
     });
 }
-function getPkgJsonFromGithub(projectPath) {
-    var link = projectPath.replace('github', 'raw.githubusercontent') + '/master/package.json';
+function flatten(doubleArr) {
+    return doubleArr.reduce(function (flatArr, arr) { return flatArr.concat(arr); }, []);
+}
+function getPkgJsonFromGithub(path) {
+    var link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
     return node_fetch_1.default(link).then(function (res) { return res.text(); });
 }
-function addSite(pkgInfo) {
-    var name = pkgInfo.split(';')[0];
-    return pkgInfo + ';https://www.npmjs.com/package/' + name;
+function getUnique(dependencies) {
+    return Array.from(new Set(dependencies));
 }
-function warnNotFound(path) {
-    console.warn(chalk_1.default.yellow("Dependencies fields not found in " + path));
+function updateVersions(dependency) {
+    return dependency.replace(/:"(.\d*\.\d*\.\d*|\w*)"/g, ': "latest"');
+}
+function toPkgJsonFormat(dependencies) {
+    return JSON.stringify(JSON.parse("{\"dependencies\":{" + dependencies + "}}"), null, 2);
+}
+function warn(message) {
+    console.warn(chalk_1.default.yellow(message));
 }
