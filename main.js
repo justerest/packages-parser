@@ -41,18 +41,23 @@ var node_fetch_1 = require("node-fetch");
 var DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, allDeps, list;
+        var args, allDeps, oldDeps, list;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     args = process.argv.slice(2);
-                    args.push('./dist/package.json');
                     return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 1:
                     allDeps = _a.sent();
-                    list = getUnique(flatten(allDeps).map(updateVersions)).sort();
-                    fs_1.writeFileSync('./dist/package.json', toPkgJsonFormat(list));
-                    console.log(chalk_1.default.greenBright("Completed. Dependencies count: " + list.length));
+                    return [4 /*yield*/, parsePkgJson('./dist/package.json')];
+                case 2:
+                    oldDeps = _a.sent();
+                    allDeps.push(oldDeps);
+                    list = getUnique(flatten(allDeps).map(updateVersion)).sort();
+                    fs_1.writeFileSync('./dist/package.json', toPkgJson(list));
+                    console.log(chalk_1.default.greenBright("Completed.\n\n" +
+                        ("New: " + (list.length - oldDeps.length) + ";\n") +
+                        ("Total: " + list.length + ";")));
                     return [2 /*return*/];
             }
         });
@@ -102,17 +107,17 @@ function parsePkgJson(path) {
 function flatten(doubleArr) {
     return doubleArr.reduce(function (flatArr, arr) { return flatArr.concat(arr); }, []);
 }
+function getUnique(item) {
+    return Array.from(new Set(item));
+}
 function getPkgJsonFromGithub(path) {
     var link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
     return node_fetch_1.default(link).then(function (res) { return res.text(); });
 }
-function getUnique(dependencies) {
-    return Array.from(new Set(dependencies));
-}
-function updateVersions(dependency) {
+function updateVersion(dependency) {
     return dependency.replace(/:"([a-z0-9^.@\/\-,]*)"/g, ': "latest"');
 }
-function toPkgJsonFormat(dependencies) {
+function toPkgJson(dependencies) {
     return JSON.stringify(JSON.parse("{\"dependencies\":{" + dependencies + "}}"), null, 2);
 }
 function warn(message) {
