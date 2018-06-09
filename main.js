@@ -38,91 +38,125 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
-var DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, currentDeps, parsedDeps, _a, allDeps, list;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var args, currentDeps, parsedDeps, list, parsedDepsLength;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    args = process.argv.slice(2);
+                    args = getUnique(process.argv.slice(2));
                     return [4 /*yield*/, parsePkgJson('./dist/package.json')];
                 case 1:
-                    currentDeps = _b.sent();
-                    _a = flatten;
+                    currentDeps = _a.sent();
                     return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 2:
-                    parsedDeps = _a.apply(void 0, [_b.sent()]);
-                    allDeps = parsedDeps
-                        .concat(currentDeps)
-                        .map(updateVersion);
-                    list = getUnique(allDeps).sort();
+                    parsedDeps = _a.sent();
+                    list = Object.assign.apply(Object, [{}, currentDeps].concat(parsedDeps));
+                    parsedDepsLength = parsedDeps
+                        .reduce(function (length, deps) { return getSize(deps) + length; }, 0);
                     fs_1.writeFileSync('./dist/package.json', toPkgJson(list));
-                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDeps.length + ";\n" +
-                        ("New: " + (list.length - currentDeps.length) + ";\n") +
-                        ("Total: " + list.length + ";")));
+                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsLength + ";\n" +
+                        ("New: " + (getSize(list) - getSize(currentDeps)) + ";\n") +
+                        ("Total: " + getSize(list) + ";")));
                     return [2 /*return*/];
             }
         });
     });
 })();
+function getUnique(array) {
+    return Array.from(new Set(array));
+}
 function parsePkgJson(path) {
     return __awaiter(this, void 0, void 0, function () {
-        var text, _a, dependencies, e_1;
+        var text, _a, e_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    _b.trys.push([0, 4, , 5]);
+                    _b.trys.push([0, 5, , 6]);
                     if (!path.match(/^http/i)) return [3 /*break*/, 2];
-                    return [4 /*yield*/, getPkgJsonFromGithub(path)];
+                    return [4 /*yield*/, fetchPkgJson(path)];
                 case 1:
                     _a = _b.sent();
-                    return [3 /*break*/, 3];
-                case 2:
-                    _a = fs_1.readFileSync(path, 'utf-8');
-                    _b.label = 3;
+                    return [3 /*break*/, 4];
+                case 2: return [4 /*yield*/, readFileAsync(path)];
                 case 3:
-                    text = _a;
-                    dependencies = text
-                        .replace(/(\n|\s)/g, '')
-                        .match(DEPS_REGEXP);
-                    if (dependencies) {
-                        return [2 /*return*/, dependencies
-                                .map(function (dirtyDepStr) { return dirtyDepStr.slice(15, -1); })
-                                .filter(Boolean)
-                                .join(',')
-                                .split(',')];
-                    }
-                    else {
-                        warn("Dependencies fields not found in " + path);
-                        return [2 /*return*/, []];
-                    }
-                    return [3 /*break*/, 5];
+                    _a = _b.sent();
+                    _b.label = 4;
                 case 4:
+                    text = _a;
+                    return [2 /*return*/, parseDeps(text)];
+                case 5:
                     e_1 = _b.sent();
-                    warn("package.json not found in " + path);
-                    return [2 /*return*/, []];
-                case 5: return [2 /*return*/];
+                    console.warn(chalk_1.default.yellow((path + ': ' + e_1.message + '\n')));
+                    return [2 /*return*/, {}];
+                case 6: return [2 /*return*/];
             }
         });
     });
 }
-function flatten(doubleArr) {
-    return doubleArr.reduce(function (flatArr, arr) { return flatArr.concat(arr); }, []);
+/** Get package.json from GitHub project */
+function fetchPkgJson(path) {
+    return __awaiter(this, void 0, void 0, function () {
+        var link, response, e_2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, node_fetch_1.default(link)];
+                case 2:
+                    response = _a.sent();
+                    return [2 /*return*/, response.text()];
+                case 3:
+                    e_2 = _a.sent();
+                    throw new Error('Error in request. ' + e_2.message);
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
 }
-function getUnique(item) {
-    return Array.from(new Set(item));
+function readFileAsync(path) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, new Promise(function (resolve, reject) {
+                    fs_1.readFile(path, function (e, data) {
+                        if (e) {
+                            reject(new Error('Error in file reading. ' + e.message));
+                        }
+                        else
+                            resolve(data.toString('utf-8'));
+                    });
+                })];
+        });
+    });
 }
-function getPkgJsonFromGithub(path) {
-    var link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
-    return node_fetch_1.default(link).then(function (res) { return res.text(); });
+function parseDeps(text) {
+    try {
+        var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
+        if (dependencies || devDependencies) {
+            return Object.assign({}, dependencies, devDependencies);
+        }
+        else
+            throw new Error('Dependencies fields not found.');
+    }
+    catch (e) {
+        throw new Error('Error in package.json format. ' + e.message);
+    }
 }
-function updateVersion(dependency) {
-    return dependency.replace(/:"([a-z0-9^.@\/\-,]*)"/g, ': "latest"');
+function getSize(obj) {
+    return Object.keys(obj).length;
 }
 function toPkgJson(dependencies) {
-    return JSON.stringify(JSON.parse("{\"dependencies\":{" + dependencies + "}}"), null, 2);
-}
-function warn(message) {
-    console.warn(chalk_1.default.yellow(message));
+    var sortedList = Object.keys(dependencies)
+        .sort()
+        .reduce(function (res, key) {
+        res[key] = 'latest';
+        return res;
+    }, {});
+    return JSON.stringify({
+        name: 'parsed-dependencies',
+        dependencies: sortedList,
+    }, null, 2);
 }

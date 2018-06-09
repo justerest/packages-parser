@@ -3,7 +3,6 @@
 		"strict": true,
 		"moduleResolution": "node",
 		"target": "es5",
-		"allowJs": true,
 		"lib": [
 			"es2015",
 			"es2015.promise",

@@ -12,7 +12,8 @@
         "one-line": false,
         "curly": false,
         "no-console": false,
-        "indent": 2
+        "indent": 2,
+        "object-literal-sort-keys": false
     },
     "rulesDirectory": []
 }

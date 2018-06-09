@@ -1,77 +1,102 @@
 import chalk from 'chalk';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFile, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 
-const DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
+interface IDependencies {
+	[name: string]: string;
+}
+
+interface IPkgJson {
+	[key: string]: any;
+	dependencies?: IDependencies;
+	devDependencies?: IDependencies;
+}
 
 (async function main() {
-  const args = process.argv.slice(2);
+	const args = getUnique(process.argv.slice(2));
 
-  const currentDeps = await parsePkgJson('./dist/package.json');
-  const parsedDeps = flatten(await Promise.all(args.map(parsePkgJson)));
-  const allDeps = parsedDeps
-    .concat(currentDeps)
-    .map(updateVersion);
+	const currentDeps = await parsePkgJson('./dist/package.json');
+	const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePkgJson));
+	const list: IDependencies = Object.assign({}, currentDeps, ...parsedDeps);
 
-  const list = getUnique(allDeps).sort();
+	const parsedDepsLength = parsedDeps
+		.reduce((length, deps) => getSize(deps) + length, 0);
 
-  writeFileSync('./dist/package.json', toPkgJson(list));
-  console.log(chalk.greenBright(
-    `Parsed: ${parsedDeps.length};\n` +
-    `New: ${list.length - currentDeps.length};\n` +
-    `Total: ${list.length};`,
-  ));
+	writeFileSync('./dist/package.json', toPkgJson(list));
+	console.log(chalk.greenBright(
+		`Parsed: ${parsedDepsLength};\n` +
+		`New: ${getSize(list) - getSize(currentDeps)};\n` +
+		`Total: ${getSize(list)};`,
+	));
 })();
 
+function getUnique(array: any[]) {
+	return Array.from(new Set(array));
+}
+
 async function parsePkgJson(path: string) {
-  try {
-    const text = path.match(/^http/i)
-      ? await getPkgJsonFromGithub(path)
-      : readFileSync(path, 'utf-8');
-
-    const dependencies = text
-      .replace(/(\n|\s)/g, '')
-      .match(DEPS_REGEXP);
-
-    if (dependencies) {
-      return dependencies
-        .map((dirtyDepStr) => dirtyDepStr.slice(15, -1))
-        .filter(Boolean)
-        .join(',')
-        .split(',');
-    }
-    else {
-      warn(`Dependencies fields not found in ${path}`);
-      return [];
-    }
-  }
-  catch (e) {
-    warn(`package.json not found in ${path}`);
-    return [];
-  }
+	try {
+		const text = path.match(/^http/i)
+			? await fetchPkgJson(path)
+			: await readFileAsync(path);
+		return parseDeps(text);
+	}
+	catch (e) {
+		console.warn(chalk.yellow((path + ': ' + e.message + '\n')));
+		return {};
+	}
 }
 
-function flatten<T>(doubleArr: T[][]) {
-  return doubleArr.reduce((flatArr, arr) => flatArr.concat(arr), []);
+/** Get package.json from GitHub project */
+async function fetchPkgJson(path: string) {
+	const link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
+	try {
+		const response = await fetch(link);
+		return response.text();
+	}
+	catch (e) {
+		throw new Error('Error in request. ' + e.message);
+	}
 }
 
-function getUnique<T>(item: T[]) {
-  return Array.from(new Set(item));
+async function readFileAsync(path: string) {
+	return new Promise<string>((resolve, reject) => {
+		readFile(path, (e, data) => {
+			if (e) {
+				reject(new Error('Error in file reading. ' + e.message));
+			}
+			else resolve(data.toString('utf-8'));
+		});
+	});
 }
 
-function getPkgJsonFromGithub(path: string): Promise<string> {
-  const link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
-  return fetch(link).then((res) => res.text());
+function parseDeps(text: string) {
+	try {
+		const { dependencies, devDependencies }: IPkgJson = JSON.parse(text);
+		if (dependencies || devDependencies) {
+			return Object.assign({}, dependencies, devDependencies);
+		}
+		else throw new Error('Dependencies fields not found.');
+	}
+	catch (e) {
+		throw new Error('Error in package.json format. ' + e.message);
+	}
 }
 
-function updateVersion(dependency: string) {
-  return dependency.replace(/:"([a-z0-9^.@\/\-,]*)"/g, ': "latest"');
+function getSize(obj: {}) {
+	return Object.keys(obj).length;
 }
 
-function toPkgJson(dependencies: string[]) {
-  return JSON.stringify(JSON.parse(`{"dependencies":{${dependencies}}}`), null, 2);
-}
+function toPkgJson(dependencies: IDependencies) {
+	const sortedList = Object.keys(dependencies)
+		.sort()
+		.reduce((res, key) => {
+			res[key] = 'latest';
+			return res;
+		}, {} as IDependencies);
 
-function warn(message: string) {
-  console.warn(chalk.yellow(message));
+	return JSON.stringify({
+		name: 'parsed-dependencies',
+		dependencies: sortedList,
+	}, null, 2);
 }

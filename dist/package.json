@@ -1,4 +1,5 @@
 {
+  "name": "parsed-dependencies",
   "dependencies": {
     "@angular/animations": "latest",
     "@angular/cdk": "latest",
