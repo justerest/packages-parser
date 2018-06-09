@@ -7,16 +7,18 @@ const DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 (async function main() {
   const args = process.argv.slice(2);
 
-  const allDeps: string[][] = await Promise.all(args.map(parsePkgJson));
-  const oldDeps = await parsePkgJson('./dist/package.json');
-  allDeps.push(oldDeps);
+  const currentDeps = await parsePkgJson('./dist/package.json');
+  const parsedDeps = flatten(await Promise.all(args.map(parsePkgJson)));
+  const allDeps = parsedDeps
+    .concat(currentDeps)
+    .map(updateVersion);
 
-  const list: string[] = getUnique(flatten(allDeps).map(updateVersion)).sort();
+  const list = getUnique(allDeps).sort();
 
   writeFileSync('./dist/package.json', toPkgJson(list));
   console.log(chalk.greenBright(
-    `Completed.\n\n` +
-    `New: ${list.length - oldDeps.length};\n` +
+    `Parsed: ${parsedDeps.length};\n` +
+    `New: ${list.length - currentDeps.length};\n` +
     `Total: ${list.length};`,
   ));
 })();

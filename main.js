@@ -41,22 +41,25 @@ var node_fetch_1 = require("node-fetch");
 var DEPS_REGEXP = /dependencies":{[a-z0-9:^.@\/\-,"]*}/gi;
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, allDeps, oldDeps, list;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var args, currentDeps, parsedDeps, _a, allDeps, list;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
                     args = process.argv.slice(2);
-                    return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
-                case 1:
-                    allDeps = _a.sent();
                     return [4 /*yield*/, parsePkgJson('./dist/package.json')];
+                case 1:
+                    currentDeps = _b.sent();
+                    _a = flatten;
+                    return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 2:
-                    oldDeps = _a.sent();
-                    allDeps.push(oldDeps);
-                    list = getUnique(flatten(allDeps).map(updateVersion)).sort();
+                    parsedDeps = _a.apply(void 0, [_b.sent()]);
+                    allDeps = parsedDeps
+                        .concat(currentDeps)
+                        .map(updateVersion);
+                    list = getUnique(allDeps).sort();
                     fs_1.writeFileSync('./dist/package.json', toPkgJson(list));
-                    console.log(chalk_1.default.greenBright("Completed.\n\n" +
-                        ("New: " + (list.length - oldDeps.length) + ";\n") +
+                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDeps.length + ";\n" +
+                        ("New: " + (list.length - currentDeps.length) + ";\n") +
                         ("Total: " + list.length + ";")));
                     return [2 /*return*/];
             }
