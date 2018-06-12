@@ -13,7 +13,7 @@ interface IPkgJson {
 }
 
 (async function main() {
-	const args = getUnique(process.argv.slice(2));
+	const args = process.argv.slice(2).filter(getUnique());
 
 	const currentDeps = await parsePkgJson('./dist/package.json');
 	const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePkgJson));
@@ -30,8 +30,16 @@ interface IPkgJson {
 	));
 })();
 
-function getUnique(array: any[]) {
-	return Array.from(new Set(array));
+function getUnique() {
+	const incluededValues = new Set();
+
+	return (el: any) => {
+		if (incluededValues.has(el)) return false;
+		else {
+			incluededValues.add(el);
+			return true;
+		}
+	};
 }
 
 async function parsePkgJson(path: string) {
