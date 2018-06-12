@@ -1,6 +1,10 @@
 import chalk from 'chalk';
-import { readFile, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFile, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
+import { join } from 'path';
+
+const DIST_PATH = './dist';
+const RESULT_PATH = join(DIST_PATH, 'package.json');
 
 interface IDependencies {
 	[name: string]: string;
@@ -15,14 +19,16 @@ interface IPkgJson {
 (async function main() {
 	const args = process.argv.slice(2).filter(getUnique());
 
-	const currentDeps = await parsePkgJson('./dist/package.json');
+	const currentDeps = await parsePkgJson(RESULT_PATH);
 	const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePkgJson));
 	const list: IDependencies = Object.assign({}, currentDeps, ...parsedDeps);
 
 	const parsedDepsSize = parsedDeps
 		.reduce((size, deps) => getSize(deps) + size, 0);
 
-	writeFileSync('./dist/package.json', toPkgJson(list));
+	if (!existsSync(DIST_PATH)) mkdirSync(DIST_PATH);
+	writeFileSync(RESULT_PATH, toPkgJson(list));
+
 	console.log(chalk.greenBright(
 		`Parsed: ${parsedDepsSize};\n` +
 		`New: ${getSize(list) - getSize(currentDeps)};\n` +

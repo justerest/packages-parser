@@ -34,28 +34,53 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spread = (this && this.__spread) || function () {
+    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
+    return ar;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
+var path_1 = require("path");
+var DIST_PATH = './dist';
+var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, currentDeps, parsedDeps, list, parsedDepsLength;
+        var args, currentDeps, parsedDeps, list, parsedDepsSize;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    args = getUnique(process.argv.slice(2));
-                    return [4 /*yield*/, parsePkgJson('./dist/package.json')];
+                    args = process.argv.slice(2).filter(getUnique());
+                    return [4 /*yield*/, parsePkgJson(RESULT_PATH)];
                 case 1:
                     currentDeps = _a.sent();
                     return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 2:
                     parsedDeps = _a.sent();
-                    list = Object.assign.apply(Object, [{}, currentDeps].concat(parsedDeps));
-                    parsedDepsLength = parsedDeps
-                        .reduce(function (length, deps) { return getSize(deps) + length; }, 0);
-                    fs_1.writeFileSync('./dist/package.json', toPkgJson(list));
-                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsLength + ";\n" +
+                    list = Object.assign.apply(Object, __spread([{}, currentDeps], parsedDeps));
+                    parsedDepsSize = parsedDeps
+                        .reduce(function (size, deps) { return getSize(deps) + size; }, 0);
+                    if (!fs_1.existsSync(DIST_PATH))
+                        fs_1.mkdirSync(DIST_PATH);
+                    fs_1.writeFileSync(RESULT_PATH, toPkgJson(list));
+                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsSize + ";\n" +
                         ("New: " + (getSize(list) - getSize(currentDeps)) + ";\n") +
                         ("Total: " + getSize(list) + ";")));
                     return [2 /*return*/];
@@ -63,8 +88,16 @@ var node_fetch_1 = require("node-fetch");
         });
     });
 })();
-function getUnique(array) {
-    return Array.from(new Set(array));
+function getUnique() {
+    var incluededValues = new Set();
+    return function (el) {
+        if (incluededValues.has(el))
+            return false;
+        else {
+            incluededValues.add(el);
+            return true;
+        }
+    };
 }
 function parsePkgJson(path) {
     return __awaiter(this, void 0, void 0, function () {
@@ -155,8 +188,9 @@ function toPkgJson(dependencies) {
         res[key] = 'latest';
         return res;
     }, {});
-    return JSON.stringify({
+    var result = {
         name: 'parsed-dependencies',
         dependencies: sortedList,
-    }, null, 2);
+    };
+    return JSON.stringify(result, null, 2);
 }
