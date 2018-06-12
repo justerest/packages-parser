@@ -5,6 +5,7 @@ import { join } from 'path';
 
 const DIST_PATH = './dist';
 const RESULT_PATH = join(DIST_PATH, 'package.json');
+const LATEST_VERSION = 'latest';
 
 interface IDependencies {
 	[name: string]: string;
@@ -19,9 +20,9 @@ interface IPkgJson {
 (async function main() {
 	const args = process.argv.slice(2).filter(getUnique());
 
-	const currentDeps = await parsePkgJson(RESULT_PATH);
+	const currentDeps: IDependencies = await parsePkgJson(RESULT_PATH);
 	const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePkgJson));
-	const list: IDependencies = Object.assign({}, currentDeps, ...parsedDeps);
+	const list: IDependencies = mergeDeps(currentDeps, ...parsedDeps);
 
 	const parsedDepsSize = parsedDeps
 		.reduce((size, deps) => getSize(deps) + size, 0);
@@ -35,6 +36,20 @@ interface IPkgJson {
 		`Total: ${getSize(list)};`,
 	));
 })();
+
+function mergeDeps(currentDeps: IDependencies, ...parsedDeps: IDependencies[]): IDependencies {
+	const result: IDependencies = new Proxy(Object.assign({}, currentDeps), {
+		set(obj, prop: string, value) {
+			const currentVersion = obj[prop] || '0.0.0';
+			const lastVersion = [currentVersion, value].sort().reverse()[0];
+			obj[prop] = lastVersion;
+			return true;
+		},
+	});
+	parsedDeps.forEach((deps) => Object.assign(result, deps));
+
+	return result;
+}
 
 function getUnique() {
 	const incluededValues = new Set();
@@ -103,16 +118,16 @@ function getSize(obj: {}) {
 }
 
 function toPkgJson(dependencies: IDependencies) {
-	const sortedList = Object.keys(dependencies)
+	const sortedDeps = Object.keys(dependencies)
 		.sort()
 		.reduce((res, key) => {
-			res[key] = 'latest';
+			res[key] = dependencies[key];
 			return res;
 		}, {} as IDependencies);
 
 	const result = {
 		name: 'parsed-dependencies',
-		dependencies: sortedList,
+		dependencies: sortedDeps,
 	};
 
 	return JSON.stringify(result, null, 2);

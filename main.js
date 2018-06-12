@@ -34,26 +34,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __read = (this && this.__read) || function (o, n) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator];
-    if (!m) return o;
-    var i = m.call(o), r, ar = [], e;
-    try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-    }
-    catch (error) { e = { error: error }; }
-    finally {
-        try {
-            if (r && !r.done && (m = i["return"])) m.call(i);
-        }
-        finally { if (e) throw e.error; }
-    }
-    return ar;
-};
-var __spread = (this && this.__spread) || function () {
-    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
-    return ar;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
@@ -61,6 +41,7 @@ var node_fetch_1 = require("node-fetch");
 var path_1 = require("path");
 var DIST_PATH = './dist';
 var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
+var LATEST_VERSION = 'latest';
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
         var args, currentDeps, parsedDeps, list, parsedDepsSize;
@@ -74,7 +55,7 @@ var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
                     return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
                 case 2:
                     parsedDeps = _a.sent();
-                    list = Object.assign.apply(Object, __spread([{}, currentDeps], parsedDeps));
+                    list = mergeDeps.apply(void 0, [currentDeps].concat(parsedDeps));
                     parsedDepsSize = parsedDeps
                         .reduce(function (size, deps) { return getSize(deps) + size; }, 0);
                     if (!fs_1.existsSync(DIST_PATH))
@@ -88,6 +69,22 @@ var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
         });
     });
 })();
+function mergeDeps(currentDeps) {
+    var parsedDeps = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        parsedDeps[_i - 1] = arguments[_i];
+    }
+    var result = new Proxy(Object.assign({}, currentDeps), {
+        set: function (obj, prop, value) {
+            var currentVersion = obj[prop] || '0.0.0';
+            var lastVersion = [currentVersion, value].sort().reverse()[0];
+            obj[prop] = lastVersion;
+            return true;
+        },
+    });
+    parsedDeps.forEach(function (deps) { return Object.assign(result, deps); });
+    return result;
+}
 function getUnique() {
     var incluededValues = new Set();
     return function (el) {
@@ -182,15 +179,15 @@ function getSize(obj) {
     return Object.keys(obj).length;
 }
 function toPkgJson(dependencies) {
-    var sortedList = Object.keys(dependencies)
+    var sortedDeps = Object.keys(dependencies)
         .sort()
         .reduce(function (res, key) {
-        res[key] = 'latest';
+        res[key] = dependencies[key];
         return res;
     }, {});
     var result = {
         name: 'parsed-dependencies',
-        dependencies: sortedList,
+        dependencies: sortedDeps,
     };
     return JSON.stringify(result, null, 2);
 }

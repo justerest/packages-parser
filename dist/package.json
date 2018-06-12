@@ -58,7 +58,7 @@
     "babel-register": "latest",
     "bootstrap": "latest",
     "chai": "latest",
-    "chalk": "latest",
+    "chalk": "^2.4.1",
     "chromedriver": "latest",
     "compression": "latest",
     "compression-webpack-plugin": "latest",
