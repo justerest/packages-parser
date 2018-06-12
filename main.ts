@@ -19,12 +19,12 @@ interface IPkgJson {
 	const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePkgJson));
 	const list: IDependencies = Object.assign({}, currentDeps, ...parsedDeps);
 
-	const parsedDepsLength = parsedDeps
-		.reduce((length, deps) => getSize(deps) + length, 0);
+	const parsedDepsSize = parsedDeps
+		.reduce((size, deps) => getSize(deps) + size, 0);
 
 	writeFileSync('./dist/package.json', toPkgJson(list));
 	console.log(chalk.greenBright(
-		`Parsed: ${parsedDepsLength};\n` +
+		`Parsed: ${parsedDepsSize};\n` +
 		`New: ${getSize(list) - getSize(currentDeps)};\n` +
 		`Total: ${getSize(list)};`,
 	));
@@ -39,6 +39,7 @@ async function parsePkgJson(path: string) {
 		const text = path.match(/^http/i)
 			? await fetchPkgJson(path)
 			: await readFileAsync(path);
+
 		return parseDeps(text);
 	}
 	catch (e) {
@@ -95,8 +96,10 @@ function toPkgJson(dependencies: IDependencies) {
 			return res;
 		}, {} as IDependencies);
 
-	return JSON.stringify({
+	const result = {
 		name: 'parsed-dependencies',
 		dependencies: sortedList,
-	}, null, 2);
+	};
+
+	return JSON.stringify(result, null, 2);
 }
