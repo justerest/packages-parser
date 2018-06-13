@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
-import { writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 import { join } from 'path';
-import { IDependencies, IOptions, IPackageJson } from './models';
+import { IDependencies, IFormatedDependencies, IOptions, IPackageJson } from './models';
 import { readFileAsync, sizeOf, unique } from './utils';
 
 // tslint:disable-next-line
@@ -15,33 +15,42 @@ const commandLineArgs: typeof import('command-line-args') = require('command-lin
 const options = commandLineArgs([
   { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
   { name: 'outFile', alias: 'o', type: String, defaultValue: join(__dirname, '../build/package.json') },
-  { name: 'last', alias: 'l', type: Boolean },
+  { name: 'latest', alias: 'l', type: Boolean },
+  { name: 'saveOrder', type: Boolean },
+  { name: 'prod', alias: 'S', type: Boolean },
+  { name: 'only', alias: 'f', type: String, defaultValue: 'none' },
 ]) as IOptions;
+
+const isOutFileExist = existsSync(options.outFile);
 
 (async function main() {
   const args = options.src.filter(unique());
 
-  const currentDeps: IDependencies = await parsePackageJson(options.outFile);
-  const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePackageJson));
-  const list: IDependencies = mergeDeps(currentDeps, ...parsedDeps);
-
+  const currentDeps = isOutFileExist
+    ? await parsePackageJson(options.outFile)
+    : {};
+  const parsedDeps = await Promise.all(args.map(parsePackageJson));
   const parsedDepsSize = parsedDeps.reduce((size, deps) => sizeOf(deps) + size, 0);
 
-  writeFileSync(options.outFile, toPackageJson(list));
+  const result = applyOptions(mergeDependencies(currentDeps, ...parsedDeps));
 
+  writeFileSync(options.outFile, toPackageJson(result));
   console.log(chalk.greenBright(
     `Parsed: ${parsedDepsSize};\n` +
-    `New: ${sizeOf(list) - sizeOf(currentDeps)};\n` +
-    `Total: ${sizeOf(list)};`,
+    `New: ${sizeOf(result) - sizeOf(currentDeps)};\n` +
+    `Total: ${sizeOf(result)};`,
   ));
 })();
 
-function mergeDeps(...depsArr: IDependencies[]) {
-  const result: IDependencies = new Proxy({} as IDependencies, {
-    set(obj, prop: string, value: string) {
-      const currentVersion = obj[prop] || '0.0.0';
-      const lastVersion = [currentVersion, value].sort().reverse()[0];
-      obj[prop] = lastVersion;
+function mergeDependencies(...depsArr: IFormatedDependencies[]) {
+  const result = new Proxy({} as IFormatedDependencies, {
+    set(obj, prop: string, value: IFormatedDependencies[string]) {
+      const currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
+      const lastVersion = [currentVersion, value.version].sort().reverse()[0];
+      obj[prop] = {
+        version: lastVersion,
+        isProd: obj[prop] && obj[prop].isProd || value.isProd,
+      };
       return true;
     },
   });
@@ -61,10 +70,10 @@ async function parsePackageJson(path: string) {
       ? await fetchPackageJson(path)
       : await readFileAsync(path);
 
-    return parseText(text);
+    return parseDependencies(text);
   }
   catch (e) {
-    console.warn(chalk.yellow((path + ': ' + e.message + '\n')));
+    console.warn(chalk.yellow(path + ': ' + e.message + '\n'));
     return {};
   }
 }
@@ -86,11 +95,14 @@ async function fetchPackageJson(path: string) {
 /**
  * Parses `dependencies` and `devDependencies` fields from JSON
  */
-function parseText(text: string) {
+function parseDependencies(text: string) {
   try {
     const { dependencies, devDependencies }: IPackageJson = JSON.parse(text);
     if (dependencies || devDependencies) {
-      return mergeDeps(dependencies || {}, devDependencies || {});
+      return mergeDependencies(
+        options.only !== 'dev' ? formateDependencies(dependencies || {}, true) : {},
+        options.only !== 'prod' ? formateDependencies(devDependencies || {}) : {},
+      );
     }
     else throw new Error('Dependencies fields not found.');
   }
@@ -99,21 +111,64 @@ function parseText(text: string) {
   }
 }
 
+function formateDependencies(dependencies: IDependencies, isProd = false) {
+  return Object.keys(dependencies)
+    .reduce((result, key) => {
+      result[key] = {
+        version: dependencies[key],
+        isProd,
+      };
+
+      return result;
+    }, {} as IFormatedDependencies);
+}
+
 /**
  * Converts dependencies object to formated package.json
  */
-function toPackageJson(dependencies: IDependencies) {
-  const sortedDeps = Object.keys(dependencies)
-    .sort()
-    .reduce((list, key) => {
-      list[key] = options.last ? 'latest' : dependencies[key];
-      return list;
-    }, {} as IDependencies);
-
-  const result = {
-    name: 'parsed-dependencies',
-    dependencies: sortedDeps,
-  };
-
+function toPackageJson(dependencies: IFormatedDependencies) {
+  const result = getOutFile();
+  Object.assign(result, splitDependencies(dependencies));
   return JSON.stringify(result, null, 2);
+}
+
+function getOutFile(pkgJson: IPackageJson = { name: 'parsed-packages' }) {
+  if (isOutFileExist) {
+    try {
+      Object.assign(pkgJson, JSON.parse(readFileSync(options.outFile, 'utf-8')));
+    }
+    catch (e) {
+      console.warn(chalk.yellow(options.outFile + ': Bad output file. ' + e.message + '\n'));
+    }
+  }
+
+  return pkgJson;
+}
+
+function splitDependencies(dependencies: IFormatedDependencies) {
+  return Object.keys(dependencies)
+    .reduce((result, key) => {
+      const { version, isProd } = dependencies[key];
+      const type = isProd ? 'dependencies' : 'devDependencies';
+
+      result[type][key] = version;
+
+      return result;
+    }, { dependencies: {}, devDependencies: {} } as { dependencies: IDependencies, devDependencies: IDependencies });
+}
+
+function applyOptions(dependencies: IFormatedDependencies) {
+  const keys = Object.keys(dependencies);
+
+  if (!options.saveOrder) keys.sort();
+
+  return keys.reduce((result, key) => {
+    const dependency = dependencies[key];
+    result[key] = Object.assign({}, dependency);
+
+    if (options.latest) result[key].version = 'latest';
+    if (options.prod) result[key].isProd = true;
+
+    return result;
+  }, {} as IFormatedDependencies);
 }

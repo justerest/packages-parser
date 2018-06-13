@@ -9,14 +9,14 @@
   "scripts": {
     "build": "tsc -p .",
     "start": "node dist/main.js",
-    "test": "npm run build && npm start"
+    "test": "npm run build && npm start -- -o test.json package.json"
   },
   "author": "justerest",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^2.4.1",
     "command-line-args": "^5.0.2",
-    "node-fetch": "^2.1.2"
+    "node-fetch": "^2.1.2",
+    "chalk": "^2.4.1"
   },
   "devDependencies": {
     "@types/command-line-args": "^5.0.0",

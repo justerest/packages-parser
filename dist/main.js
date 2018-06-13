@@ -49,42 +49,56 @@ var commandLineArgs = require('command-line-args');
 var options = commandLineArgs([
     { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
     { name: 'outFile', alias: 'o', type: String, defaultValue: path_1.join(__dirname, '../build/package.json') },
-    { name: 'last', alias: 'l', type: Boolean },
+    { name: 'latest', alias: 'l', type: Boolean },
+    { name: 'saveOrder', type: Boolean },
+    { name: 'prod', alias: 'S', type: Boolean },
+    { name: 'only', alias: 'f', type: String, defaultValue: 'none' },
 ]);
+var isOutFileExist = fs_1.existsSync(options.outFile);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, currentDeps, parsedDeps, list, parsedDepsSize;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var args, currentDeps, _a, parsedDeps, parsedDepsSize, result;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
                     args = options.src.filter(utils_1.unique());
+                    if (!isOutFileExist) return [3 /*break*/, 2];
                     return [4 /*yield*/, parsePackageJson(options.outFile)];
                 case 1:
-                    currentDeps = _a.sent();
-                    return [4 /*yield*/, Promise.all(args.map(parsePackageJson))];
+                    _a = _b.sent();
+                    return [3 /*break*/, 3];
                 case 2:
-                    parsedDeps = _a.sent();
-                    list = mergeDeps.apply(void 0, [currentDeps].concat(parsedDeps));
+                    _a = {};
+                    _b.label = 3;
+                case 3:
+                    currentDeps = _a;
+                    return [4 /*yield*/, Promise.all(args.map(parsePackageJson))];
+                case 4:
+                    parsedDeps = _b.sent();
                     parsedDepsSize = parsedDeps.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
-                    fs_1.writeFileSync(options.outFile, toPackageJson(list));
+                    result = applyOptions(mergeDependencies.apply(void 0, [currentDeps].concat(parsedDeps)));
+                    fs_1.writeFileSync(options.outFile, toPackageJson(result));
                     console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsSize + ";\n" +
-                        ("New: " + (utils_1.sizeOf(list) - utils_1.sizeOf(currentDeps)) + ";\n") +
-                        ("Total: " + utils_1.sizeOf(list) + ";")));
+                        ("New: " + (utils_1.sizeOf(result) - utils_1.sizeOf(currentDeps)) + ";\n") +
+                        ("Total: " + utils_1.sizeOf(result) + ";")));
                     return [2 /*return*/];
             }
         });
     });
 })();
-function mergeDeps() {
+function mergeDependencies() {
     var depsArr = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         depsArr[_i] = arguments[_i];
     }
     var result = new Proxy({}, {
         set: function (obj, prop, value) {
-            var currentVersion = obj[prop] || '0.0.0';
-            var lastVersion = [currentVersion, value].sort().reverse()[0];
-            obj[prop] = lastVersion;
+            var currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
+            var lastVersion = [currentVersion, value.version].sort().reverse()[0];
+            obj[prop] = {
+                version: lastVersion,
+                isProd: obj[prop] && obj[prop].isProd || value.isProd,
+            };
             return true;
         },
     });
@@ -113,10 +127,10 @@ function parsePackageJson(path) {
                     _b.label = 4;
                 case 4:
                     text = _a;
-                    return [2 /*return*/, parseText(text)];
+                    return [2 /*return*/, parseDependencies(text)];
                 case 5:
                     e_1 = _b.sent();
-                    console.warn(chalk_1.default.yellow((path + ': ' + e_1.message + '\n')));
+                    console.warn(chalk_1.default.yellow(path + ': ' + e_1.message + '\n'));
                     return [2 /*return*/, {}];
                 case 6: return [2 /*return*/];
             }
@@ -151,11 +165,11 @@ function fetchPackageJson(path) {
 /**
  * Parses `dependencies` and `devDependencies` fields from JSON
  */
-function parseText(text) {
+function parseDependencies(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
-            return mergeDeps(dependencies || {}, devDependencies || {});
+            return mergeDependencies(options.only !== 'dev' ? formateDependencies(dependencies || {}, true) : {}, options.only !== 'prod' ? formateDependencies(devDependencies || {}) : {});
         }
         else
             throw new Error('Dependencies fields not found.');
@@ -164,19 +178,57 @@ function parseText(text) {
         throw new Error('Error in package.json format. ' + e.message);
     }
 }
+function formateDependencies(dependencies, isProd) {
+    if (isProd === void 0) { isProd = false; }
+    return Object.keys(dependencies)
+        .reduce(function (result, key) {
+        result[key] = {
+            version: dependencies[key],
+            isProd: isProd,
+        };
+        return result;
+    }, {});
+}
 /**
  * Converts dependencies object to formated package.json
  */
 function toPackageJson(dependencies) {
-    var sortedDeps = Object.keys(dependencies)
-        .sort()
-        .reduce(function (list, key) {
-        list[key] = options.last ? 'latest' : dependencies[key];
-        return list;
-    }, {});
-    var result = {
-        name: 'parsed-dependencies',
-        dependencies: sortedDeps,
-    };
+    var result = getOutFile();
+    Object.assign(result, splitDependencies(dependencies));
     return JSON.stringify(result, null, 2);
+}
+function getOutFile(pkgJson) {
+    if (pkgJson === void 0) { pkgJson = { name: 'parsed-packages' }; }
+    if (isOutFileExist) {
+        try {
+            Object.assign(pkgJson, JSON.parse(fs_1.readFileSync(options.outFile, 'utf-8')));
+        }
+        catch (e) {
+            console.warn(chalk_1.default.yellow(options.outFile + ': Bad output file. ' + e.message + '\n'));
+        }
+    }
+    return pkgJson;
+}
+function splitDependencies(dependencies) {
+    return Object.keys(dependencies)
+        .reduce(function (result, key) {
+        var _a = dependencies[key], version = _a.version, isProd = _a.isProd;
+        var type = isProd ? 'dependencies' : 'devDependencies';
+        result[type][key] = version;
+        return result;
+    }, { dependencies: {}, devDependencies: {} });
+}
+function applyOptions(dependencies) {
+    var keys = Object.keys(dependencies);
+    if (!options.saveOrder)
+        keys.sort();
+    return keys.reduce(function (result, key) {
+        var dependency = dependencies[key];
+        result[key] = Object.assign({}, dependency);
+        if (options.latest)
+            result[key].version = 'latest';
+        if (options.prod)
+            result[key].isProd = true;
+        return result;
+    }, {});
 }
