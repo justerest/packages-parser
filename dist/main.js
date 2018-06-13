@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
-var path_1 = require("path");
 var utils_1 = require("./utils");
 // tslint:disable-next-line
 var commandLineArgs = require('command-line-args');
@@ -48,63 +47,36 @@ var commandLineArgs = require('command-line-args');
  */
 var options = commandLineArgs([
     { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
-    { name: 'outFile', alias: 'o', type: String, defaultValue: path_1.join(__dirname, '../build/package.json') },
+    { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
+    { name: 'filter', alias: 'f', type: String, defaultValue: 'none' },
     { name: 'latest', alias: 'l', type: Boolean },
+    { name: 'save', alias: 's', type: Boolean },
+    { name: 'rewrite', alias: 'r', type: Boolean },
     { name: 'saveOrder', type: Boolean },
-    { name: 'prod', alias: 'S', type: Boolean },
-    { name: 'only', alias: 'f', type: String, defaultValue: 'none' },
 ]);
 var isOutFileExist = fs_1.existsSync(options.outFile);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, currentDeps, _a, parsedDeps, parsedDepsSize, result;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var paths, allDependencies, result, allDependenciesCount;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    args = options.src.filter(utils_1.unique());
-                    if (!isOutFileExist) return [3 /*break*/, 2];
-                    return [4 /*yield*/, parsePackageJson(options.outFile)];
+                    paths = options.src.filter(utils_1.unique());
+                    if (isOutFileExist && !options.rewrite)
+                        paths.push(options.outFile);
+                    return [4 /*yield*/, Promise.all(paths.map(parsePackageJson))];
                 case 1:
-                    _a = _b.sent();
-                    return [3 /*break*/, 3];
-                case 2:
-                    _a = {};
-                    _b.label = 3;
-                case 3:
-                    currentDeps = _a;
-                    return [4 /*yield*/, Promise.all(args.map(parsePackageJson))];
-                case 4:
-                    parsedDeps = _b.sent();
-                    parsedDepsSize = parsedDeps.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
-                    result = applyOptions(mergeDependencies.apply(void 0, [currentDeps].concat(parsedDeps)));
+                    allDependencies = _a.sent();
+                    result = applyOptions(mergeDependencies.apply(void 0, allDependencies));
                     fs_1.writeFileSync(options.outFile, toPackageJson(result));
-                    console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsSize + ";\n" +
-                        ("New: " + (utils_1.sizeOf(result) - utils_1.sizeOf(currentDeps)) + ";\n") +
-                        ("Total: " + utils_1.sizeOf(result) + ";")));
+                    allDependenciesCount = allDependencies.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
+                    console.log(chalk_1.default.greenBright("Parsed: " + allDependenciesCount + ";\n" +
+                        ("Unique: " + utils_1.sizeOf(result) + ";")));
                     return [2 /*return*/];
             }
         });
     });
 })();
-function mergeDependencies() {
-    var depsArr = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        depsArr[_i] = arguments[_i];
-    }
-    var result = new Proxy({}, {
-        set: function (obj, prop, value) {
-            var currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
-            var lastVersion = [currentVersion, value.version].sort().reverse()[0];
-            obj[prop] = {
-                version: lastVersion,
-                isProd: obj[prop] && obj[prop].isProd || value.isProd,
-            };
-            return true;
-        },
-    });
-    depsArr.forEach(function (deps) { return Object.assign(result, deps); });
-    return result;
-}
 /**
  * Parses dependencies from file or GitHub project
  * @param path path to file | link to GitHub project
@@ -169,7 +141,7 @@ function parseDependencies(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
-            return mergeDependencies(options.only !== 'dev' ? formateDependencies(dependencies || {}, true) : {}, options.only !== 'prod' ? formateDependencies(devDependencies || {}) : {});
+            return mergeDependencies(formateDependencies(dependencies || {}, true), formateDependencies(devDependencies || {}));
         }
         else
             throw new Error('Dependencies fields not found.');
@@ -189,6 +161,25 @@ function formateDependencies(dependencies, isProd) {
         return result;
     }, {});
 }
+function mergeDependencies() {
+    var depsArr = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        depsArr[_i] = arguments[_i];
+    }
+    var result = new Proxy({}, {
+        set: function (obj, prop, value) {
+            var currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
+            var lastVersion = [currentVersion, value.version].sort().reverse()[0];
+            obj[prop] = {
+                version: lastVersion,
+                isProd: obj[prop] && obj[prop].isProd || value.isProd,
+            };
+            return true;
+        },
+    });
+    depsArr.forEach(function (deps) { return Object.assign(result, deps); });
+    return result;
+}
 /**
  * Converts dependencies object to formated package.json
  */
@@ -205,6 +196,9 @@ function getOutFile(pkgJson) {
         }
         catch (e) {
             console.warn(chalk_1.default.yellow(options.outFile + ': Bad output file. ' + e.message + '\n'));
+            if (!options.rewrite) {
+                throw new Error(chalk_1.default.bgRed('Use --rewrite (-r) option to override bad output file'));
+            }
         }
     }
     return pkgJson;
@@ -224,11 +218,15 @@ function applyOptions(dependencies) {
         keys.sort();
     return keys.reduce(function (result, key) {
         var dependency = dependencies[key];
-        result[key] = Object.assign({}, dependency);
-        if (options.latest)
-            result[key].version = 'latest';
-        if (options.prod)
-            result[key].isProd = true;
+        var isFilterPassed = (options.filter !== 'dev' && dependency.isProd ||
+            options.filter !== 'prod' && !dependency.isProd);
+        if (isFilterPassed) {
+            result[key] = Object.assign({}, dependency);
+            if (options.latest)
+                result[key].version = 'latest';
+            if (options.save)
+                result[key].isProd = true;
+        }
         return result;
     }, {});
 }

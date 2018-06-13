@@ -14,9 +14,9 @@
   "author": "justerest",
   "license": "MIT",
   "dependencies": {
+    "chalk": "^2.4.1",
     "command-line-args": "^5.0.2",
-    "node-fetch": "^2.1.2",
-    "chalk": "^2.4.1"
+    "node-fetch": "^2.1.2"
   },
   "devDependencies": {
     "@types/command-line-args": "^5.0.0",

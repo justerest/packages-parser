@@ -2,8 +2,7 @@
 import chalk from 'chalk';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
-import { join } from 'path';
-import { IDependencies, IFormatedDependencies, IOptions, IPackageJson } from './models';
+import { IDependencies, INameVersion, IOptions, IPackageJson } from './models';
 import { readFileAsync, sizeOf, unique } from './utils';
 
 // tslint:disable-next-line
@@ -14,51 +13,31 @@ const commandLineArgs: typeof import('command-line-args') = require('command-lin
  */
 const options = commandLineArgs([
   { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
-  { name: 'outFile', alias: 'o', type: String, defaultValue: join(__dirname, '../build/package.json') },
+  { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
+  { name: 'filter', alias: 'f', type: String, defaultValue: 'none' },
   { name: 'latest', alias: 'l', type: Boolean },
+  { name: 'save', alias: 's', type: Boolean },
+  { name: 'rewrite', alias: 'r', type: Boolean },
   { name: 'saveOrder', type: Boolean },
-  { name: 'prod', alias: 'S', type: Boolean },
-  { name: 'only', alias: 'f', type: String, defaultValue: 'none' },
 ]) as IOptions;
 
 const isOutFileExist = existsSync(options.outFile);
 
 (async function main() {
-  const args = options.src.filter(unique());
+  const paths = options.src.filter(unique());
+  if (isOutFileExist && !options.rewrite) paths.push(options.outFile);
 
-  const currentDeps = isOutFileExist
-    ? await parsePackageJson(options.outFile)
-    : {};
-  const parsedDeps = await Promise.all(args.map(parsePackageJson));
-  const parsedDepsSize = parsedDeps.reduce((size, deps) => sizeOf(deps) + size, 0);
-
-  const result = applyOptions(mergeDependencies(currentDeps, ...parsedDeps));
+  const allDependencies = await Promise.all(paths.map(parsePackageJson));
+  const result = applyOptions(mergeDependencies(...allDependencies));
 
   writeFileSync(options.outFile, toPackageJson(result));
+
+  const allDependenciesCount = allDependencies.reduce((size, deps) => sizeOf(deps) + size, 0);
   console.log(chalk.greenBright(
-    `Parsed: ${parsedDepsSize};\n` +
-    `New: ${sizeOf(result) - sizeOf(currentDeps)};\n` +
-    `Total: ${sizeOf(result)};`,
+    `Parsed: ${allDependenciesCount};\n` +
+    `Unique: ${sizeOf(result)};`,
   ));
 })();
-
-function mergeDependencies(...depsArr: IFormatedDependencies[]) {
-  const result = new Proxy({} as IFormatedDependencies, {
-    set(obj, prop: string, value: IFormatedDependencies[string]) {
-      const currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
-      const lastVersion = [currentVersion, value.version].sort().reverse()[0];
-      obj[prop] = {
-        version: lastVersion,
-        isProd: obj[prop] && obj[prop].isProd || value.isProd,
-      };
-      return true;
-    },
-  });
-
-  depsArr.forEach((deps) => Object.assign(result, deps));
-
-  return result;
-}
 
 /**
  * Parses dependencies from file or GitHub project
@@ -100,8 +79,8 @@ function parseDependencies(text: string) {
     const { dependencies, devDependencies }: IPackageJson = JSON.parse(text);
     if (dependencies || devDependencies) {
       return mergeDependencies(
-        options.only !== 'dev' ? formateDependencies(dependencies || {}, true) : {},
-        options.only !== 'prod' ? formateDependencies(devDependencies || {}) : {},
+        formateDependencies(dependencies || {}, true),
+        formateDependencies(devDependencies || {}),
       );
     }
     else throw new Error('Dependencies fields not found.');
@@ -111,7 +90,7 @@ function parseDependencies(text: string) {
   }
 }
 
-function formateDependencies(dependencies: IDependencies, isProd = false) {
+function formateDependencies(dependencies: INameVersion, isProd = false) {
   return Object.keys(dependencies)
     .reduce((result, key) => {
       result[key] = {
@@ -120,13 +99,31 @@ function formateDependencies(dependencies: IDependencies, isProd = false) {
       };
 
       return result;
-    }, {} as IFormatedDependencies);
+    }, {} as IDependencies);
+}
+
+function mergeDependencies(...depsArr: IDependencies[]) {
+  const result = new Proxy({} as IDependencies, {
+    set(obj, prop: string, value: IDependencies[string]) {
+      const currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
+      const lastVersion = [currentVersion, value.version].sort().reverse()[0];
+      obj[prop] = {
+        version: lastVersion,
+        isProd: obj[prop] && obj[prop].isProd || value.isProd,
+      };
+      return true;
+    },
+  });
+
+  depsArr.forEach((deps) => Object.assign(result, deps));
+
+  return result;
 }
 
 /**
  * Converts dependencies object to formated package.json
  */
-function toPackageJson(dependencies: IFormatedDependencies) {
+function toPackageJson(dependencies: IDependencies) {
   const result = getOutFile();
   Object.assign(result, splitDependencies(dependencies));
   return JSON.stringify(result, null, 2);
@@ -139,13 +136,16 @@ function getOutFile(pkgJson: IPackageJson = { name: 'parsed-packages' }) {
     }
     catch (e) {
       console.warn(chalk.yellow(options.outFile + ': Bad output file. ' + e.message + '\n'));
+      if (!options.rewrite) {
+        throw new Error(chalk.bgRed('Use --rewrite (-r) option to override bad output file'));
+      }
     }
   }
 
   return pkgJson;
 }
 
-function splitDependencies(dependencies: IFormatedDependencies) {
+function splitDependencies(dependencies: IDependencies) {
   return Object.keys(dependencies)
     .reduce((result, key) => {
       const { version, isProd } = dependencies[key];
@@ -154,21 +154,28 @@ function splitDependencies(dependencies: IFormatedDependencies) {
       result[type][key] = version;
 
       return result;
-    }, { dependencies: {}, devDependencies: {} } as { dependencies: IDependencies, devDependencies: IDependencies });
+    }, { dependencies: {}, devDependencies: {} } as { dependencies: INameVersion, devDependencies: INameVersion });
 }
 
-function applyOptions(dependencies: IFormatedDependencies) {
+function applyOptions(dependencies: IDependencies) {
   const keys = Object.keys(dependencies);
 
   if (!options.saveOrder) keys.sort();
 
   return keys.reduce((result, key) => {
     const dependency = dependencies[key];
-    result[key] = Object.assign({}, dependency);
 
-    if (options.latest) result[key].version = 'latest';
-    if (options.prod) result[key].isProd = true;
+    const isFilterPassed = (
+      options.filter !== 'dev' && dependency.isProd ||
+      options.filter !== 'prod' && !dependency.isProd
+    );
+
+    if (isFilterPassed) {
+      result[key] = Object.assign({}, dependency);
+      if (options.latest) result[key].version = 'latest';
+      if (options.save) result[key].isProd = true;
+    }
 
     return result;
-  }, {} as IFormatedDependencies);
+  }, {} as IDependencies);
 }
