@@ -1,20 +1,25 @@
 {
   "name": "packages-parser",
   "version": "0.0.0",
-  "description": "Parse packages info into *.csv",
-  "main": "main.js",
+  "description": "Parse and merge packages",
+  "bin": {
+    "parsepkg": "./dist/main.js"
+  },
+  "main": "./dist/main.js",
   "scripts": {
     "build": "tsc -p .",
-    "start": "node main.js",
+    "start": "node dist/main.js",
     "test": "npm run build && npm start"
   },
   "author": "justerest",
   "license": "MIT",
   "dependencies": {
     "chalk": "^2.4.1",
+    "command-line-args": "^5.0.2",
     "node-fetch": "^2.1.2"
   },
   "devDependencies": {
+    "@types/command-line-args": "^5.0.0",
     "@types/node": "^10.3.2",
     "@types/node-fetch": "^2.1.1",
     "tslint": "^5.10.0",

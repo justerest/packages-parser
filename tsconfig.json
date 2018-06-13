@@ -7,9 +7,11 @@
 			"es2015",
 			"es2015.promise",
 			"es2016"
-		]
+		],
+		"outDir": "./dist",
+		"module": "commonjs"
 	},
 	"include": [
-		"./main.ts"
+		"./src/"
 	]
 }

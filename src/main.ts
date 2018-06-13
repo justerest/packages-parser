@@ -1,32 +1,33 @@
+#!/usr/bin/env node
 import chalk from 'chalk';
-import { existsSync, mkdirSync, readFile, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 import { join } from 'path';
+import { IDependencies, IOptions, IPackageJson } from './models';
+import { readFileAsync, sizeOf, unique } from './utils';
 
-const DIST_PATH = join(__dirname, 'dist');
-const RESULT_PATH = join(DIST_PATH, 'package.json');
+// tslint:disable-next-line
+const commandLineArgs: typeof import('command-line-args') = require('command-line-args');
 
-interface IDependencies {
-  [name: string]: string;
-}
-
-interface IPackageJson {
-  [key: string]: any;
-  dependencies?: IDependencies;
-  devDependencies?: IDependencies;
-}
+/**
+ * Global options
+ */
+const options = commandLineArgs([
+  { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
+  { name: 'outFile', alias: 'o', type: String, defaultValue: join(__dirname, '../build/package.json') },
+  { name: 'last', alias: 'l', type: Boolean },
+]) as IOptions;
 
 (async function main() {
-  const args = process.argv.slice(2).filter(unique());
+  const args = options.src.filter(unique());
 
-  const currentDeps: IDependencies = await parsePackageJson(RESULT_PATH);
+  const currentDeps: IDependencies = await parsePackageJson(options.outFile);
   const parsedDeps: IDependencies[] = await Promise.all(args.map(parsePackageJson));
   const list: IDependencies = mergeDeps(currentDeps, ...parsedDeps);
 
   const parsedDepsSize = parsedDeps.reduce((size, deps) => sizeOf(deps) + size, 0);
 
-  if (!existsSync(DIST_PATH)) mkdirSync(DIST_PATH);
-  writeFileSync(RESULT_PATH, toPackageJson(list));
+  writeFileSync(options.outFile, toPackageJson(list));
 
   console.log(chalk.greenBright(
     `Parsed: ${parsedDepsSize};\n` +
@@ -48,23 +49,6 @@ function mergeDeps(...depsArr: IDependencies[]) {
   depsArr.forEach((deps) => Object.assign(result, deps));
 
   return result;
-}
-
-/**
- * Filters unique values
- * @example
- * array.filter(unique());
- */
-function unique() {
-  const incluededValues = new Set();
-
-  return (el: any) => {
-    if (incluededValues.has(el)) return false;
-    else {
-      incluededValues.add(el);
-      return true;
-    }
-  };
 }
 
 /**
@@ -122,7 +106,7 @@ function toPackageJson(dependencies: IDependencies) {
   const sortedDeps = Object.keys(dependencies)
     .sort()
     .reduce((list, key) => {
-      list[key] = dependencies[key];
+      list[key] = options.last ? 'latest' : dependencies[key];
       return list;
     }, {} as IDependencies);
 
@@ -132,26 +116,4 @@ function toPackageJson(dependencies: IDependencies) {
   };
 
   return JSON.stringify(result, null, 2);
-}
-
-/**
- * Gets size of object
- * @private
- */
-function sizeOf(obj: {}) {
-  return Object.keys(obj).length;
-}
-
-/**
- * @private
- */
-async function readFileAsync(path: string) {
-  return new Promise<string>((resolve, reject) => {
-    readFile(path, (e, data) => {
-      if (e) {
-        reject(new Error('Error in file reading. ' + e.message));
-      }
-      else resolve(data.toString('utf-8'));
-    });
-  });
 }

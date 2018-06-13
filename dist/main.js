@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -39,29 +40,36 @@ var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
 var path_1 = require("path");
-var DIST_PATH = path_1.join(__dirname, 'dist');
-var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
+var utils_1 = require("./utils");
+// tslint:disable-next-line
+var commandLineArgs = require('command-line-args');
+/**
+ * Global options
+ */
+var options = commandLineArgs([
+    { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
+    { name: 'outFile', alias: 'o', type: String, defaultValue: path_1.join(__dirname, '../build/package.json') },
+    { name: 'last', alias: 'l', type: Boolean },
+]);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
         var args, currentDeps, parsedDeps, list, parsedDepsSize;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    args = process.argv.slice(2).filter(unique());
-                    return [4 /*yield*/, parsePkgJson(RESULT_PATH)];
+                    args = options.src.filter(utils_1.unique());
+                    return [4 /*yield*/, parsePackageJson(options.outFile)];
                 case 1:
                     currentDeps = _a.sent();
-                    return [4 /*yield*/, Promise.all(args.map(parsePkgJson))];
+                    return [4 /*yield*/, Promise.all(args.map(parsePackageJson))];
                 case 2:
                     parsedDeps = _a.sent();
                     list = mergeDeps.apply(void 0, [currentDeps].concat(parsedDeps));
-                    parsedDepsSize = parsedDeps.reduce(function (size, deps) { return sizeOf(deps) + size; }, 0);
-                    if (!fs_1.existsSync(DIST_PATH))
-                        fs_1.mkdirSync(DIST_PATH);
-                    fs_1.writeFileSync(RESULT_PATH, toPkgJson(list));
+                    parsedDepsSize = parsedDeps.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
+                    fs_1.writeFileSync(options.outFile, toPackageJson(list));
                     console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsSize + ";\n" +
-                        ("New: " + (sizeOf(list) - sizeOf(currentDeps)) + ";\n") +
-                        ("Total: " + sizeOf(list) + ";")));
+                        ("New: " + (utils_1.sizeOf(list) - utils_1.sizeOf(currentDeps)) + ";\n") +
+                        ("Total: " + utils_1.sizeOf(list) + ";")));
                     return [2 /*return*/];
             }
         });
@@ -84,22 +92,10 @@ function mergeDeps() {
     return result;
 }
 /**
- * Filter for unique values
- * @example
- * array.filter(unique());
+ * Parses dependencies from file or GitHub project
+ * @param path path to file | link to GitHub project
  */
-function unique() {
-    var incluededValues = new Set();
-    return function (el) {
-        if (incluededValues.has(el))
-            return false;
-        else {
-            incluededValues.add(el);
-            return true;
-        }
-    };
-}
-function parsePkgJson(path) {
+function parsePackageJson(path) {
     return __awaiter(this, void 0, void 0, function () {
         var text, _a, e_1;
         return __generator(this, function (_b) {
@@ -107,17 +103,17 @@ function parsePkgJson(path) {
                 case 0:
                     _b.trys.push([0, 5, , 6]);
                     if (!path.match(/^http/i)) return [3 /*break*/, 2];
-                    return [4 /*yield*/, fetchPkgJson(path)];
+                    return [4 /*yield*/, fetchPackageJson(path)];
                 case 1:
                     _a = _b.sent();
                     return [3 /*break*/, 4];
-                case 2: return [4 /*yield*/, readFileAsync(path)];
+                case 2: return [4 /*yield*/, utils_1.readFileAsync(path)];
                 case 3:
                     _a = _b.sent();
                     _b.label = 4;
                 case 4:
                     text = _a;
-                    return [2 /*return*/, parseDeps(text)];
+                    return [2 /*return*/, parseText(text)];
                 case 5:
                     e_1 = _b.sent();
                     console.warn(chalk_1.default.yellow((path + ': ' + e_1.message + '\n')));
@@ -127,8 +123,10 @@ function parsePkgJson(path) {
         });
     });
 }
-/** Get package.json from GitHub project */
-function fetchPkgJson(path) {
+/**
+ * Gets package.json from GitHub project
+ */
+function fetchPackageJson(path) {
     return __awaiter(this, void 0, void 0, function () {
         var link, response, e_2;
         return __generator(this, function (_a) {
@@ -150,22 +148,10 @@ function fetchPkgJson(path) {
         });
     });
 }
-function readFileAsync(path) {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            return [2 /*return*/, new Promise(function (resolve, reject) {
-                    fs_1.readFile(path, function (e, data) {
-                        if (e) {
-                            reject(new Error('Error in file reading. ' + e.message));
-                        }
-                        else
-                            resolve(data.toString('utf-8'));
-                    });
-                })];
-        });
-    });
-}
-function parseDeps(text) {
+/**
+ * Parses `dependencies` and `devDependencies` fields from JSON
+ */
+function parseText(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
@@ -178,14 +164,14 @@ function parseDeps(text) {
         throw new Error('Error in package.json format. ' + e.message);
     }
 }
-function sizeOf(obj) {
-    return Object.keys(obj).length;
-}
-function toPkgJson(dependencies) {
+/**
+ * Converts dependencies object to formated package.json
+ */
+function toPackageJson(dependencies) {
     var sortedDeps = Object.keys(dependencies)
         .sort()
         .reduce(function (list, key) {
-        list[key] = dependencies[key];
+        list[key] = options.last ? 'latest' : dependencies[key];
         return list;
     }, {});
     var result = {
