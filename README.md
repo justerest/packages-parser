@@ -1,7 +1,10 @@
 # packages-parser
-Parse project dependencies
+Parses project dependencies and merges it to single package.json
+
 ## Usage
 ```bash
-npm start [...path to package.json or link of GitHub project]
+npm start <options> [...paths to package.json or links of GitHub project]
 ```
-New dependencies will be added in `dist/package.json`.
+
+## Options
+### 

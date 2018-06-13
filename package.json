@@ -2,9 +2,10 @@
   "name": "packages-parser",
   "version": "0.0.0",
   "description": "Parse and merge packages",
-  "bin": {
-    "parsepkg": "./dist/main.js"
+  "repository": {
+    "github": "https://github.com/justerest/packages-parser.git"
   },
+  "bin": "./dist/main.js",
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc -p .",
