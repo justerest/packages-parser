@@ -1,6 +1,6 @@
 {
   "name": "packages-parser",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Parse and merge packages",
   "repository": {
     "github": "https://github.com/justerest/packages-parser.git"
