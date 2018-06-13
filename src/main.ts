@@ -19,35 +19,35 @@ const options = commandLineArgs([
   { name: 'save', alias: 's', type: Boolean },
   { name: 'rewrite', alias: 'r', type: Boolean },
   { name: 'saveOrder', type: Boolean },
+  { name: 'cli', type: Boolean },
 ]) as IOptions;
 
-packagesParser(options.src.filter(unique()));
-
 export * from './api';
-export async function packagesParser(paths: string[] = [], params?: IOptions) {
+export async function packagesParser(paths = options.src.filter(unique()), params?: Partial<IOptions>) {
   Object.assign(options, params);
   if (existsSync(options.outFile) && !options.rewrite) paths.push(options.outFile);
 
   const allDependencies = await Promise.all(paths.map(parsePackageJson));
   const result = applyOptions(mergeDependencies(...allDependencies));
 
-  writeFileSync(options.outFile, toPackageJson(result));
+  if (options.cli) {
+    const allDependenciesCount = allDependencies.reduce((size, deps) => sizeOf(deps) + size, 0);
 
-  const allDependenciesCount = allDependencies.reduce((size, deps) => sizeOf(deps) + size, 0);
-  console.log(chalk.greenBright(
-    `Parsed: ${allDependenciesCount};\n` +
-    `Unique: ${sizeOf(result)};`,
-  ));
+    writeFileSync(options.outFile, toPackageJson(result));
+    console.log(chalk.greenBright(
+      `Parsed: ${allDependenciesCount};\n` +
+      `Unique: ${sizeOf(result)};`,
+    ));
+  }
+  else return splitDependencies(result);
 }
 
 /**
  * Converts dependencies object to formated package.json
  */
-function toPackageJson(dependencies: IDependencies) {
+export function toPackageJson(dependencies: IDependencies) {
   const result = getOutFile();
-
   Object.assign(result, splitDependencies(dependencies));
-
   return JSON.stringify(result, null, 2);
 }
 

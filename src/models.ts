@@ -8,6 +8,7 @@ export interface IOptions extends CommandLineOptions {
   save?: boolean;
   rewrite?: boolean;
   saveOrder?: boolean;
+  cli?: boolean;
 }
 
 export interface INameVersion {

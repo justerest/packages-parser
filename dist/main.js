@@ -56,11 +56,11 @@ var options = commandLineArgs([
     { name: 'save', alias: 's', type: Boolean },
     { name: 'rewrite', alias: 'r', type: Boolean },
     { name: 'saveOrder', type: Boolean },
+    { name: 'cli', type: Boolean },
 ]);
-packagesParser(options.src.filter(utils_1.unique()));
 __export(require("./api"));
 function packagesParser(paths, params) {
-    if (paths === void 0) { paths = []; }
+    if (paths === void 0) { paths = options.src.filter(utils_1.unique()); }
     return __awaiter(this, void 0, void 0, function () {
         var allDependencies, result, allDependenciesCount;
         return __generator(this, function (_a) {
@@ -73,10 +73,14 @@ function packagesParser(paths, params) {
                 case 1:
                     allDependencies = _a.sent();
                     result = applyOptions(api_1.mergeDependencies.apply(void 0, allDependencies));
-                    fs_1.writeFileSync(options.outFile, toPackageJson(result));
-                    allDependenciesCount = allDependencies.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
-                    console.log(chalk_1.default.greenBright("Parsed: " + allDependenciesCount + ";\n" +
-                        ("Unique: " + utils_1.sizeOf(result) + ";")));
+                    if (options.cli) {
+                        allDependenciesCount = allDependencies.reduce(function (size, deps) { return utils_1.sizeOf(deps) + size; }, 0);
+                        fs_1.writeFileSync(options.outFile, toPackageJson(result));
+                        console.log(chalk_1.default.greenBright("Parsed: " + allDependenciesCount + ";\n" +
+                            ("Unique: " + utils_1.sizeOf(result) + ";")));
+                    }
+                    else
+                        return [2 /*return*/, api_1.splitDependencies(result)];
                     return [2 /*return*/];
             }
         });
@@ -91,6 +95,7 @@ function toPackageJson(dependencies) {
     Object.assign(result, api_1.splitDependencies(dependencies));
     return JSON.stringify(result, null, 2);
 }
+exports.toPackageJson = toPackageJson;
 function getOutFile(pkgJson) {
     if (pkgJson === void 0) { pkgJson = { name: 'parsed-packages' }; }
     if (fs_1.existsSync(options.outFile)) {
