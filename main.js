@@ -39,16 +39,15 @@ var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
 var path_1 = require("path");
-var DIST_PATH = './dist';
+var DIST_PATH = path_1.join(__dirname, 'dist');
 var RESULT_PATH = path_1.join(DIST_PATH, 'package.json');
-var LATEST_VERSION = 'latest';
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
         var args, currentDeps, parsedDeps, list, parsedDepsSize;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    args = process.argv.slice(2).filter(getUnique());
+                    args = process.argv.slice(2).filter(unique());
                     return [4 /*yield*/, parsePkgJson(RESULT_PATH)];
                 case 1:
                     currentDeps = _a.sent();
@@ -56,25 +55,24 @@ var LATEST_VERSION = 'latest';
                 case 2:
                     parsedDeps = _a.sent();
                     list = mergeDeps.apply(void 0, [currentDeps].concat(parsedDeps));
-                    parsedDepsSize = parsedDeps
-                        .reduce(function (size, deps) { return getSize(deps) + size; }, 0);
+                    parsedDepsSize = parsedDeps.reduce(function (size, deps) { return sizeOf(deps) + size; }, 0);
                     if (!fs_1.existsSync(DIST_PATH))
                         fs_1.mkdirSync(DIST_PATH);
                     fs_1.writeFileSync(RESULT_PATH, toPkgJson(list));
                     console.log(chalk_1.default.greenBright("Parsed: " + parsedDepsSize + ";\n" +
-                        ("New: " + (getSize(list) - getSize(currentDeps)) + ";\n") +
-                        ("Total: " + getSize(list) + ";")));
+                        ("New: " + (sizeOf(list) - sizeOf(currentDeps)) + ";\n") +
+                        ("Total: " + sizeOf(list) + ";")));
                     return [2 /*return*/];
             }
         });
     });
 })();
-function mergeDeps(currentDeps) {
-    var parsedDeps = [];
-    for (var _i = 1; _i < arguments.length; _i++) {
-        parsedDeps[_i - 1] = arguments[_i];
+function mergeDeps() {
+    var depsArr = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        depsArr[_i] = arguments[_i];
     }
-    var result = new Proxy(Object.assign({}, currentDeps), {
+    var result = new Proxy({}, {
         set: function (obj, prop, value) {
             var currentVersion = obj[prop] || '0.0.0';
             var lastVersion = [currentVersion, value].sort().reverse()[0];
@@ -82,10 +80,15 @@ function mergeDeps(currentDeps) {
             return true;
         },
     });
-    parsedDeps.forEach(function (deps) { return Object.assign(result, deps); });
+    depsArr.forEach(function (deps) { return Object.assign(result, deps); });
     return result;
 }
-function getUnique() {
+/**
+ * Filter for unique values
+ * @example
+ * array.filter(unique());
+ */
+function unique() {
     var incluededValues = new Set();
     return function (el) {
         if (incluededValues.has(el))
@@ -166,7 +169,7 @@ function parseDeps(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
-            return Object.assign({}, dependencies, devDependencies);
+            return mergeDeps(dependencies || {}, devDependencies || {});
         }
         else
             throw new Error('Dependencies fields not found.');
@@ -175,15 +178,15 @@ function parseDeps(text) {
         throw new Error('Error in package.json format. ' + e.message);
     }
 }
-function getSize(obj) {
+function sizeOf(obj) {
     return Object.keys(obj).length;
 }
 function toPkgJson(dependencies) {
     var sortedDeps = Object.keys(dependencies)
         .sort()
-        .reduce(function (res, key) {
-        res[key] = dependencies[key];
-        return res;
+        .reduce(function (list, key) {
+        list[key] = dependencies[key];
+        return list;
     }, {});
     var result = {
         name: 'parsed-dependencies',
