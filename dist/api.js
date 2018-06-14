@@ -36,8 +36,49 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
+var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
 var utils_1 = require("./utils");
+function packagesParser(paths, options) {
+    if (paths === void 0) { paths = []; }
+    if (options === void 0) { options = {}; }
+    return __awaiter(this, void 0, void 0, function () {
+        var allDependencies, mergedDependencies, filteredDependencies;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (options.outFile && fs_1.existsSync(options.outFile) && !options.rewrite) {
+                        paths.push(options.outFile);
+                    }
+                    return [4 /*yield*/, Promise.all(paths.map(parsePackageJson))];
+                case 1:
+                    allDependencies = _a.sent();
+                    mergedDependencies = mergeDependencies.apply(void 0, allDependencies);
+                    filteredDependencies = applyOptions(mergedDependencies, options);
+                    return [2 /*return*/, splitDependencies(filteredDependencies)];
+            }
+        });
+    });
+}
+exports.packagesParser = packagesParser;
+function applyOptions(dependencies, options) {
+    var keys = Object.keys(dependencies);
+    if (!options.saveOrder)
+        keys.sort();
+    return keys.reduce(function (result, key) {
+        var dependency = dependencies[key];
+        var isFilterPassed = (options.filter !== 'dev' && dependency.isProd ||
+            options.filter !== 'prod' && !dependency.isProd);
+        if (isFilterPassed) {
+            result[key] = Object.assign({}, dependency);
+            if (options.latest)
+                result[key].version = 'latest';
+            if (options.save)
+                result[key].isProd = true;
+        }
+        return result;
+    }, {});
+}
 /**
  * Parses dependencies from file or GitHub project
  * @param path path to file | link to GitHub project
@@ -60,7 +101,7 @@ function parsePackageJson(path) {
                     _b.label = 4;
                 case 4:
                     jsonText = _a;
-                    return [2 /*return*/, parseDependencies(jsonText)];
+                    return [2 /*return*/, parseText(jsonText)];
                 case 5:
                     e_1 = _b.sent();
                     console.warn(chalk_1.default.yellow(path + ': ' + e_1.message + '\n'));
@@ -74,11 +115,11 @@ exports.parsePackageJson = parsePackageJson;
 /**
  * Parses `dependencies` and `devDependencies` fields from JSON text
  */
-function parseDependencies(text) {
+function parseText(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
-            return mergeDependencies(formateDependencies(dependencies || {}, true), formateDependencies(devDependencies || {}));
+            return mergeDependencies(transformDependencies(dependencies || {}, true), transformDependencies(devDependencies || {}));
         }
         else
             throw new Error('Dependencies fields not found.');
@@ -87,8 +128,8 @@ function parseDependencies(text) {
         throw new Error('Error in package.json format. ' + e.message);
     }
 }
-exports.parseDependencies = parseDependencies;
-function formateDependencies(dependencies, isProd) {
+exports.parseText = parseText;
+function transformDependencies(dependencies, isProd) {
     if (isProd === void 0) { isProd = false; }
     return Object.keys(dependencies)
         .reduce(function (result, key) {
@@ -99,7 +140,6 @@ function formateDependencies(dependencies, isProd) {
         return result;
     }, {});
 }
-exports.formateDependencies = formateDependencies;
 function mergeDependencies() {
     var depsArr = [];
     for (var _i = 0; _i < arguments.length; _i++) {
@@ -119,7 +159,6 @@ function mergeDependencies() {
     depsArr.forEach(function (deps) { return Object.assign(result, deps); });
     return result;
 }
-exports.mergeDependencies = mergeDependencies;
 /**
  * Gets package.json from GitHub project
  */
@@ -145,7 +184,6 @@ function parseGitHubProject(path) {
         });
     });
 }
-exports.parseGitHubProject = parseGitHubProject;
 function splitDependencies(dependencies) {
     return Object.keys(dependencies)
         .reduce(function (result, key) {
@@ -155,4 +193,3 @@ function splitDependencies(dependencies) {
         return result;
     }, { dependencies: {}, devDependencies: {} });
 }
-exports.splitDependencies = splitDependencies;

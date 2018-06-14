@@ -8,22 +8,71 @@ export interface IOptions extends CommandLineOptions {
   save?: boolean;
   rewrite?: boolean;
   saveOrder?: boolean;
-  cli?: boolean;
 }
 
-export interface INameVersion {
+/**
+ * @example
+ * ```javascript
+ * const dependencies = {
+ *   axios: '^1.0.0',
+ * };
+ * ```
+ */
+export interface IDependencies {
   [name: string]: string;
 }
 
-export interface IDependencies {
+/**
+ * @example
+ * ```javascript
+ * const dependencies = {
+ *   axios: {
+ *     version: '^1.0.0',
+ *     isProd: true,
+ *   },
+ * };
+ * ```
+ */
+export class DependenciesContainer {
   [name: string]: {
     version: string;
     isProd: boolean;
   };
+  constructor({ dependencies, devDependencies }: Partial<IPackageObject> = {}) {
+    if (dependencies) {
+      Object.keys(dependencies).forEach((key) => {
+        this[key] = {
+          version: dependencies[key],
+          isProd: true,
+        };
+      });
+    }
+    if (devDependencies) {
+      Object.keys(devDependencies).forEach((key) => {
+        this[key] = {
+          version: devDependencies[key],
+          isProd: false,
+        };
+      });
+    }
+  }
 }
 
-export interface IPackageJson {
+/**
+ * @example
+ * ```javascript
+ * const packages = {
+ *   dependencies: {
+ *     axios: '^1.0.0',
+ *   },
+ *   devDependencies: {
+ *     express: '^1.0.0',
+ *   },
+ * };
+ * ```
+ */
+export interface IPackageObject {
   [key: string]: any;
-  dependencies?: INameVersion;
-  devDependencies?: INameVersion;
+  dependencies: IDependencies;
+  devDependencies: IDependencies;
 }

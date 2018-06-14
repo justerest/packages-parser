@@ -11,5 +11,6 @@ yarn-error.log*
 *.njsproj
 *.sln
 .vscode/
+test.json
 
 !docs/**/*.js

@@ -1,37 +1,84 @@
 import chalk from 'chalk';
+import { existsSync } from 'fs';
 import fetch from 'node-fetch';
-import { IDependencies, INameVersion, IPackageJson } from './models';
+import { DependenciesContainer, IDependencies, IOptions, IPackageObject } from './models';
 import { readFileAsync } from './utils';
+
+export async function packagesParser(paths: string[] = [], options: Partial<IOptions> = {}) {
+  if (options.outFile && existsSync(options.outFile) && !options.rewrite) {
+    paths.push(options.outFile);
+  }
+  const texts = await Promise.all(paths.map(parsePath));
+  return parseStrings(texts, options);
+}
+
+export function parseStrings(texts: string[] = [], options: Partial<IOptions> = {}) {
+  const packages = texts.map(parseText);
+  return parseObjects(packages, options);
+}
+
+export function parseObjects(packages: Array<Partial<IPackageObject>> = [], options: Partial<IOptions> = {}) {
+  const allDependencies = packages.map(({ dependencies, devDependencies }) => {
+    return mergeDependencies(
+      new DependenciesContainer({ dependencies }),
+      new DependenciesContainer({ devDependencies }),
+    );
+  });
+  const mergedDependencies = mergeDependencies(...allDependencies);
+  const filteredDependencies = applyOptions(mergedDependencies, options);
+  return splitDependencies(filteredDependencies);
+}
+
+function applyOptions(dependencies: DependenciesContainer, options: Partial<IOptions>) {
+  const keys = Object.keys(dependencies);
+
+  if (!options.saveOrder) keys.sort();
+
+  return keys.reduce((result, key) => {
+    const dependency = dependencies[key];
+
+    const isFilterPassed = (
+      options.filter !== 'dev' && dependency.isProd ||
+      options.filter !== 'prod' && !dependency.isProd
+    );
+
+    if (isFilterPassed) {
+      result[key] = Object.assign({}, dependency);
+      if (options.latest) result[key].version = 'latest';
+      if (options.save) result[key].isProd = true;
+    }
+
+    return result;
+  }, new DependenciesContainer());
+}
 
 /**
  * Parses dependencies from file or GitHub project
  * @param path path to file | link to GitHub project
  */
-export async function parsePackageJson(path: string) {
+export function parsePath(path: string) {
   try {
-    const jsonText = path.match(/^http/i)
-      ? await parseGitHubProject(path)
-      : await readFileAsync(path);
-
-    return parseDependencies(jsonText);
+    return path.match(/^http/i)
+      ? parseGitHubProject(path)
+      : readFileAsync(path);
   }
   catch (e) {
     console.warn(chalk.yellow(path + ': ' + e.message + '\n'));
-    return {};
+    return '';
   }
 }
 
 /**
  * Parses `dependencies` and `devDependencies` fields from JSON text
  */
-export function parseDependencies(text: string) {
+export function parseText(text: string) {
   try {
-    const { dependencies, devDependencies }: IPackageJson = JSON.parse(text);
+    const { dependencies, devDependencies }: Partial<IPackageObject> = JSON.parse(text);
     if (dependencies || devDependencies) {
-      return mergeDependencies(
-        formateDependencies(dependencies || {}, true),
-        formateDependencies(devDependencies || {}),
-      );
+      return {
+        dependencies: dependencies || {},
+        devDependencies: devDependencies || {},
+      } as IPackageObject;
     }
     else throw new Error('Dependencies fields not found.');
   }
@@ -40,21 +87,9 @@ export function parseDependencies(text: string) {
   }
 }
 
-export function formateDependencies(dependencies: INameVersion, isProd = false) {
-  return Object.keys(dependencies)
-    .reduce((result, key) => {
-      result[key] = {
-        version: dependencies[key],
-        isProd,
-      };
-
-      return result;
-    }, {} as IDependencies);
-}
-
-export function mergeDependencies(...depsArr: IDependencies[]) {
-  const result = new Proxy({} as IDependencies, {
-    set(obj, prop: string, value: IDependencies[string]) {
+function mergeDependencies(...depsArr: DependenciesContainer[]) {
+  const result = new Proxy(new DependenciesContainer(), {
+    set(obj, prop: string, value: DependenciesContainer[string]) {
       const currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
       const [lastVersion] = [currentVersion, value.version].sort().reverse();
 
@@ -75,7 +110,7 @@ export function mergeDependencies(...depsArr: IDependencies[]) {
 /**
  * Gets package.json from GitHub project
  */
-export async function parseGitHubProject(path: string) {
+async function parseGitHubProject(path: string) {
   const link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
   try {
     const response = await fetch(link);
@@ -86,7 +121,7 @@ export async function parseGitHubProject(path: string) {
   }
 }
 
-export function splitDependencies(dependencies: IDependencies) {
+function splitDependencies(dependencies: DependenciesContainer) {
   return Object.keys(dependencies)
     .reduce((result, key) => {
       const { version, isProd } = dependencies[key];
@@ -95,5 +130,5 @@ export function splitDependencies(dependencies: IDependencies) {
       result[type][key] = version;
 
       return result;
-    }, { dependencies: {}, devDependencies: {} } as { dependencies: INameVersion, devDependencies: INameVersion });
+    }, { dependencies: {}, devDependencies: {} } as IPackageObject);
 }
