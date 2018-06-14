@@ -1,17 +1,7 @@
-import { readFile } from 'fs';
+import chalk from 'chalk';
 
-/**
- * @private
- */
-export async function readFileAsync(path: string) {
-  return new Promise<string>((resolve, reject) => {
-    readFile(path, (e, data) => {
-      if (e) {
-        reject(new Error('Error in file reading. ' + e.message));
-      }
-      else resolve(data.toString('utf-8'));
-    });
-  });
+export function warn(message: string) {
+  console.warn(chalk.yellow(message + '\n'));
 }
 
 /**

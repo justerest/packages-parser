@@ -33,29 +33,11 @@ export interface IDependencies {
  * };
  * ```
  */
-export class DependenciesContainer {
+export interface ITransformedDependencies {
   [name: string]: {
     version: string;
     isProd: boolean;
   };
-  constructor({ dependencies, devDependencies }: Partial<IPackageObject> = {}) {
-    if (dependencies) {
-      Object.keys(dependencies).forEach((key) => {
-        this[key] = {
-          version: dependencies[key],
-          isProd: true,
-        };
-      });
-    }
-    if (devDependencies) {
-      Object.keys(devDependencies).forEach((key) => {
-        this[key] = {
-          version: devDependencies[key],
-          isProd: false,
-        };
-      });
-    }
-  }
 }
 
 /**
@@ -71,8 +53,10 @@ export class DependenciesContainer {
  * };
  * ```
  */
-export interface IPackageObject {
+export class PackageObject {
   [key: string]: any;
-  dependencies: IDependencies;
-  devDependencies: IDependencies;
+  constructor(
+    public dependencies: IDependencies = {},
+    public devDependencies: IDependencies = {},
+  ) { }
 }

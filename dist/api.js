@@ -35,83 +35,104 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
-var utils_1 = require("./utils");
-function packagesParser(paths, options) {
-    if (paths === void 0) { paths = []; }
+var models_1 = require("./models");
+var DependenciesService = /** @class */ (function () {
+    function DependenciesService() {
+        this.state = {};
+    }
+    DependenciesService.prototype.merge = function () {
+        var _this = this;
+        var packages = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            packages[_i] = arguments[_i];
+        }
+        packages.forEach(function (_a) {
+            var dependencies = _a.dependencies, devDependencies = _a.devDependencies;
+            _this.add(dependencies, 'prod');
+            _this.add(devDependencies, 'dev');
+        });
+        return this;
+    };
+    DependenciesService.prototype.extract = function (options) {
+        if (options === void 0) { options = {}; }
+        var optionalDependencies = this.getOptionalDependencies(options);
+        return Object.keys(optionalDependencies)
+            .reduce(function (result, key) {
+            var _a = optionalDependencies[key], version = _a.version, isProd = _a.isProd;
+            result[isProd ? 'dependencies' : 'devDependencies'][key] = version;
+            return result;
+        }, new models_1.PackageObject());
+    };
+    DependenciesService.prototype.add = function (dependencies, type) {
+        var _this = this;
+        if (dependencies === void 0) { dependencies = {}; }
+        if (type === void 0) { type = 'prod'; }
+        Object.keys(dependencies).forEach(function (packageName) {
+            var version = dependencies[packageName];
+            var currentVersion = _this.state[packageName] ? _this.state[packageName].version : '0.0.0';
+            var latestVersion = [currentVersion, version].sort().reverse()[0];
+            _this.state[packageName] = {
+                version: latestVersion,
+                isProd: _this.state[packageName] && _this.state[packageName].isProd || type !== 'dev',
+            };
+        });
+    };
+    DependenciesService.prototype.getOptionalDependencies = function (options) {
+        var _this = this;
+        var packageNames = Object.keys(this.state);
+        if (!options.saveOrder)
+            packageNames.sort();
+        return packageNames.reduce(function (result, key) {
+            var dependency = _this.state[key];
+            var isFilterPassed = (options.filter !== 'dev' && dependency.isProd ||
+                options.filter !== 'prod' && !dependency.isProd);
+            if (isFilterPassed) {
+                result[key] = Object.assign({}, dependency);
+                if (options.latest)
+                    result[key].version = 'latest';
+                if (options.save)
+                    result[key].isProd = true;
+            }
+            return result;
+        }, {});
+    };
+    return DependenciesService;
+}());
+exports.DependenciesService = DependenciesService;
+function parseFile(path, options) {
+    if (options === void 0) { options = {}; }
+    try {
+        var text = fs_1.readFileSync(path, 'utf-8');
+        return parseText(text);
+    }
+    catch (e) {
+        throw new Error(path + ': ' + e.message + '\n');
+    }
+}
+exports.parseFile = parseFile;
+function parseLink(path, options) {
     if (options === void 0) { options = {}; }
     return __awaiter(this, void 0, void 0, function () {
-        var allDependencies, mergedDependencies, filteredDependencies;
+        var text, e_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (options.outFile && fs_1.existsSync(options.outFile) && !options.rewrite) {
-                        paths.push(options.outFile);
-                    }
-                    return [4 /*yield*/, Promise.all(paths.map(parsePackageJson))];
-                case 1:
-                    allDependencies = _a.sent();
-                    mergedDependencies = mergeDependencies.apply(void 0, allDependencies);
-                    filteredDependencies = applyOptions(mergedDependencies, options);
-                    return [2 /*return*/, splitDependencies(filteredDependencies)];
-            }
-        });
-    });
-}
-exports.packagesParser = packagesParser;
-function applyOptions(dependencies, options) {
-    var keys = Object.keys(dependencies);
-    if (!options.saveOrder)
-        keys.sort();
-    return keys.reduce(function (result, key) {
-        var dependency = dependencies[key];
-        var isFilterPassed = (options.filter !== 'dev' && dependency.isProd ||
-            options.filter !== 'prod' && !dependency.isProd);
-        if (isFilterPassed) {
-            result[key] = Object.assign({}, dependency);
-            if (options.latest)
-                result[key].version = 'latest';
-            if (options.save)
-                result[key].isProd = true;
-        }
-        return result;
-    }, {});
-}
-/**
- * Parses dependencies from file or GitHub project
- * @param path path to file | link to GitHub project
- */
-function parsePackageJson(path) {
-    return __awaiter(this, void 0, void 0, function () {
-        var jsonText, _a, e_1;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
-                case 0:
-                    _b.trys.push([0, 5, , 6]);
-                    if (!path.match(/^http/i)) return [3 /*break*/, 2];
+                    _a.trys.push([0, 2, , 3]);
                     return [4 /*yield*/, parseGitHubProject(path)];
                 case 1:
-                    _a = _b.sent();
-                    return [3 /*break*/, 4];
-                case 2: return [4 /*yield*/, utils_1.readFileAsync(path)];
-                case 3:
-                    _a = _b.sent();
-                    _b.label = 4;
-                case 4:
-                    jsonText = _a;
-                    return [2 /*return*/, parseText(jsonText)];
-                case 5:
-                    e_1 = _b.sent();
-                    console.warn(chalk_1.default.yellow(path + ': ' + e_1.message + '\n'));
-                    return [2 /*return*/, {}];
-                case 6: return [2 /*return*/];
+                    text = _a.sent();
+                    return [2 /*return*/, parseText(text)];
+                case 2:
+                    e_1 = _a.sent();
+                    throw new Error(path + ': ' + e_1.message + '\n');
+                case 3: return [2 /*return*/];
             }
         });
     });
 }
-exports.parsePackageJson = parsePackageJson;
+exports.parseLink = parseLink;
 /**
  * Parses `dependencies` and `devDependencies` fields from JSON text
  */
@@ -119,7 +140,7 @@ function parseText(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
         if (dependencies || devDependencies) {
-            return mergeDependencies(transformDependencies(dependencies || {}, true), transformDependencies(devDependencies || {}));
+            return new models_1.PackageObject(dependencies, devDependencies);
         }
         else
             throw new Error('Dependencies fields not found.');
@@ -129,39 +150,6 @@ function parseText(text) {
     }
 }
 exports.parseText = parseText;
-function transformDependencies(dependencies, isProd) {
-    if (isProd === void 0) { isProd = false; }
-    return Object.keys(dependencies)
-        .reduce(function (result, key) {
-        result[key] = {
-            version: dependencies[key],
-            isProd: isProd,
-        };
-        return result;
-    }, {});
-}
-function mergeDependencies() {
-    var depsArr = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        depsArr[_i] = arguments[_i];
-    }
-    var result = new Proxy({}, {
-        set: function (obj, prop, value) {
-            var currentVersion = obj[prop] ? obj[prop].version : '0.0.0';
-            var lastVersion = [currentVersion, value.version].sort().reverse()[0];
-            obj[prop] = {
-                version: lastVersion,
-                isProd: obj[prop] && obj[prop].isProd || value.isProd,
-            };
-            return true;
-        },
-    });
-    depsArr.forEach(function (deps) { return Object.assign(result, deps); });
-    return result;
-}
-/**
- * Gets package.json from GitHub project
- */
 function parseGitHubProject(path) {
     return __awaiter(this, void 0, void 0, function () {
         var link, response, e_2;
@@ -184,12 +172,9 @@ function parseGitHubProject(path) {
         });
     });
 }
-function splitDependencies(dependencies) {
-    return Object.keys(dependencies)
-        .reduce(function (result, key) {
-        var _a = dependencies[key], version = _a.version, isProd = _a.isProd;
-        var type = isProd ? 'dependencies' : 'devDependencies';
-        result[type][key] = version;
-        return result;
-    }, { dependencies: {}, devDependencies: {} });
+function parseObjects(packages, options) {
+    var _a;
+    if (options === void 0) { options = {}; }
+    return (_a = new DependenciesService()).merge.apply(_a, packages).extract(options);
 }
+exports.parseObjects = parseObjects;

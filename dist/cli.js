@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
 var fs_1 = require("fs");
 var api_1 = require("./api");
+var models_1 = require("./models");
 var utils_1 = require("./utils");
 // tslint:disable-next-line
 var commandLineArgs = require('command-line-args');
@@ -56,28 +57,52 @@ var options = commandLineArgs([
 ]);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var packages, defaultParams, packageJson;
+        var packages, mergedPackages, defaultParams, packageJson;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, api_1.packagesParser(options.src.filter(utils_1.unique()), options)];
+                case 0: return [4 /*yield*/, Promise.all(options.src.filter(utils_1.unique()).map(function (path) { return __awaiter(_this, void 0, void 0, function () {
+                        var _a, e_1;
+                        return __generator(this, function (_b) {
+                            switch (_b.label) {
+                                case 0:
+                                    _b.trys.push([0, 4, , 5]);
+                                    if (!path.match(/^http/i)) return [3 /*break*/, 2];
+                                    return [4 /*yield*/, api_1.parseLink(path)];
+                                case 1:
+                                    _a = _b.sent();
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    _a = api_1.parseFile(path);
+                                    _b.label = 3;
+                                case 3: return [2 /*return*/, _a];
+                                case 4:
+                                    e_1 = _b.sent();
+                                    utils_1.warn(e_1.message);
+                                    return [2 /*return*/, new models_1.PackageObject()];
+                                case 5: return [2 /*return*/];
+                            }
+                        });
+                    }); }))];
                 case 1:
                     packages = _a.sent();
+                    mergedPackages = api_1.parseObjects(packages, options);
                     defaultParams = { name: 'parsed-packages' };
                     if (fs_1.existsSync(options.outFile)) {
                         try {
                             Object.assign(defaultParams, JSON.parse(fs_1.readFileSync(options.outFile, 'utf-8')));
                         }
                         catch (e) {
-                            console.warn(chalk_1.default.yellow(options.outFile + ': Bad output file. ' + e.message + '\n'));
+                            utils_1.warn(options.outFile + ': Bad output file. ' + e.message + '\n');
                             if (!options.rewrite) {
                                 throw new Error(chalk_1.default.bgRed('Use --rewrite (-r) option to override bad output file'));
                             }
                         }
                     }
-                    packageJson = JSON.stringify(Object.assign(defaultParams, packages), null, 2);
+                    packageJson = JSON.stringify(Object.assign(defaultParams, mergedPackages), null, 2);
                     fs_1.writeFileSync(options.outFile, packageJson);
-                    console.log(chalk_1.default.greenBright("dependencies: " + utils_1.sizeOf(packages.dependencies) + ";\n" +
-                        ("devDependencies: " + utils_1.sizeOf(packages.devDependencies) + ";")));
+                    console.log(chalk_1.default.greenBright("dependencies: " + utils_1.sizeOf(mergedPackages.dependencies) + ";\n" +
+                        ("devDependencies: " + utils_1.sizeOf(mergedPackages.devDependencies) + ";")));
                     return [2 /*return*/];
             }
         });
