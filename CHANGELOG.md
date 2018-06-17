@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.2.0"></a>
+# [0.2.0](https://github.com/justerest/packages-parser/compare/v0.1.0...v0.2.0) (2018-06-17)
+
+
+### Features
+
+* add class DependenciesContainer ([5eda848](https://github.com/justerest/packages-parser/commit/5eda848))
+* add cli.ts ([86c8648](https://github.com/justerest/packages-parser/commit/86c8648))
+* export api ([cc60329](https://github.com/justerest/packages-parser/commit/cc60329))
+* spit packagesParser ([bee9b57](https://github.com/justerest/packages-parser/commit/bee9b57))
+
+
+
 <a name="0.1.0"></a>
 # 0.1.0 (2018-06-13)
 
