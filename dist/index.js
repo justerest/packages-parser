@@ -39,10 +39,11 @@ var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
 /**
  * Merges packages dependencies
- * @param options.filter Returns only `prod` or `dev` dependencies (false)
- * @param options.latest Replace versions with `"latest"` (false)
- * @param options.save Save all dependencies as `prod` (false)
- * @param options.saveOrder Doesn't sort dependencies (false)
+ * @param {{ dependencies?: any, devDependencies?: any }[]} packages
+ * @param options.filter Returns only `prod` or `dev` dependencies
+ * @param options.latest Replace versions with `"latest"`
+ * @param options.save Save all dependencies as `prod`
+ * @param options.saveOrder Doesn't sort dependencies
  */
 function mergePackages(packages, options) {
     if (options === void 0) { options = {}; }

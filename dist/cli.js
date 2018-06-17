@@ -41,13 +41,6 @@ var commandLineArgs = require("command-line-args");
 var fs_1 = require("fs");
 var _1 = require("./");
 var utils_1 = require("./utils");
-/**
- * Options
- * @param options.filter Returns only `prod` or `dev` dependencies (false)
- * @param options.latest Replaces versions with `"latest"` (false)
- * @param options.save Saves all dependencies as `prod` (false)
- * @param options.saveOrder Doesn't sort dependencies (false)
- */
 var options = commandLineArgs([
     { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
     { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
