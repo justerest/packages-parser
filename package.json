@@ -2,11 +2,13 @@
   "name": "packages-parser",
   "version": "0.1.0",
   "description": "Parse and merge packages",
-  "repository": {
-    "github": "https://github.com/justerest/packages-parser.git"
-  },
   "bin": "./dist/cli.js",
-  "main": "./dist/main.js",
+  "main": "./dist/index.ts",
+  "typings": "./src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justerest/packages-parser.git"
+  },
   "scripts": {
     "build": "tsc -p .",
     "start": "node dist/cli.js",

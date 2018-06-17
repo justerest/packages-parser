@@ -1,12 +1,12 @@
 import { CommandLineOptions } from 'command-line-args';
 
 export interface IOptions extends CommandLineOptions {
-  src: string[];
+  paths: string[];
   outFile: string;
+  rewrite?: boolean;
   filter?: 'prod' | 'dev';
   latest?: boolean;
   save?: boolean;
-  rewrite?: boolean;
   saveOrder?: boolean;
 }
 
@@ -53,10 +53,8 @@ export interface ITransformedDependencies {
  * };
  * ```
  */
-export class PackageObject {
+export interface IPackageObject {
   [key: string]: any;
-  constructor(
-    public dependencies: IDependencies = {},
-    public devDependencies: IDependencies = {},
-  ) { }
+  dependencies: IDependencies;
+  devDependencies: IDependencies;
 }

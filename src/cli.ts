@@ -1,44 +1,24 @@
 #!/usr/bin/env node
 import chalk from 'chalk';
+import commandLineArgs = require('command-line-args');
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { parseFile, parseLink, parseObjects } from './api';
-import { IOptions, PackageObject } from './models';
+import { mergePackages, parseFile, parseProject } from './';
+import { IOptions } from './models';
 import { sizeOf, unique, warn } from './utils';
 
-// tslint:disable-next-line
-const commandLineArgs: typeof import('command-line-args') = require('command-line-args');
-
-/**
- * Global options
- */
 const options = commandLineArgs([
-  { name: 'src', multiple: true, defaultOption: true, defaultValue: [] },
+  { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
   { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
+  { name: 'rewrite', alias: 'r', type: Boolean },
   { name: 'filter', alias: 'f', type: String, defaultValue: 'none' },
   { name: 'latest', alias: 'l', type: Boolean },
   { name: 'save', alias: 's', type: Boolean },
-  { name: 'rewrite', alias: 'r', type: Boolean },
   { name: 'saveOrder', type: Boolean },
 ]) as IOptions;
 
 (async function main() {
-  const packages = await Promise.all(
-    options.src.filter(unique()).map(async (path) => {
-      try {
-        return path.match(/^http/i)
-          ? await parseLink(path)
-          : parseFile(path);
-      }
-      catch (e) {
-        warn(e.message);
-        return new PackageObject();
-      }
-    }),
-  );
+  const defaultParams = { name: 'parsed-packages' } as { [name: string]: any };
 
-  const mergedPackages = parseObjects(packages, options);
-
-  const defaultParams: Partial<PackageObject> = { name: 'parsed-packages' };
   if (existsSync(options.outFile)) {
     try {
       Object.assign(defaultParams, JSON.parse(readFileSync(options.outFile, 'utf-8')));
@@ -51,6 +31,23 @@ const options = commandLineArgs([
     }
   }
 
+  if (!options.rewrite) options.paths.push(options.outFile);
+
+  const packages = await Promise.all(
+    options.paths.filter(unique()).map(async (path) => {
+      try {
+        return path.match(/^http/i)
+          ? await parseProject(path)
+          : parseFile(path);
+      }
+      catch (e) {
+        warn(e.message);
+        return {};
+      }
+    }),
+  );
+
+  const mergedPackages = mergePackages(packages, options);
   const packageJson = JSON.stringify(Object.assign(defaultParams, mergedPackages), null, 2);
 
   writeFileSync(options.outFile, packageJson);

@@ -1,7 +1,12 @@
 import chalk from 'chalk';
 
-export function warn(message: string) {
-  console.warn(chalk.yellow(message + '\n'));
+/**
+ * Colored `console.warn`
+ * @private
+ */
+export function warn(...messages: string[]) {
+  messages.push('\n');
+  console.warn(chalk.yellow(...messages));
 }
 
 /**
