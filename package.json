@@ -1,7 +1,15 @@
 {
   "name": "packages-parser",
   "version": "0.2.1",
-  "description": "Parse and merge packages",
+  "description": "Gets projects dependencies and merges they to single package.json file",
+  "keywords": [
+    "merge dependencies",
+    "merge package.json",
+    "merge packages",
+    "parse dependencies",
+    "parse package.json",
+    "parse packages"
+  ],
   "bin": "./dist/cli.js",
   "main": "./dist/index.js",
   "typings": "./src/index.ts",

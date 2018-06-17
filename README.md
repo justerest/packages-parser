@@ -1,5 +1,5 @@
 # packages-parser
-Parses project dependencies and merges it to single package.json
+Gets projects dependencies and merges they to single package.json file
 
 ## Install
 ```bash
