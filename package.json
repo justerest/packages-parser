@@ -1,6 +1,6 @@
 {
   "name": "packages-parser",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Gets projects dependencies and merges they to single package.json file",
   "keywords": [
     "merge dependencies",
