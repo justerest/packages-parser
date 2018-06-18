@@ -11,7 +11,7 @@ npm i -g packages-parser
 ```
 or use `npx`
 ```bash
-npx packages-parser
+npx pack ages-parser [...arguments]
 ```
 
 ## Usage
