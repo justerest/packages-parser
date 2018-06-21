@@ -22,6 +22,7 @@ const options = commandLineArgs([
   if (existsSync(options.outFile)) {
     try {
       Object.assign(defaultParams, JSON.parse(readFileSync(options.outFile, 'utf-8')));
+      if (!options.rewrite) options.paths.push(options.outFile);
     }
     catch (e) {
       warn(options.outFile + ': Bad output file. ' + e.message + '\n');
@@ -30,8 +31,6 @@ const options = commandLineArgs([
       }
     }
   }
-
-  if (!options.rewrite) options.paths.push(options.outFile);
 
   const packages = await Promise.all(
     options.paths.filter(unique()).map(async (path) => {
