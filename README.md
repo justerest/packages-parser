@@ -1,4 +1,8 @@
-# packages-parser
+# packages-parser [![npm version](https://badge.fury.io/js/packages-parser.svg)](http://badge.fury.io/js/packages-parser)
+
+
+
+
 Gets projects dependencies and merges they to single package.json file
 
 ## Install
@@ -7,7 +11,7 @@ npm i -g packages-parser
 ```
 or use `npx`
 ```bash
-npx packages-parser
+npx packages-parser [...arguments]
 ```
 
 ## Usage
