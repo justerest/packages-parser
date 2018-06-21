@@ -12,7 +12,7 @@ import { IDependencies, IOptions, IPackageObject, ITransformedDependencies } fro
 export function mergePackages(
   packages: Array<Partial<IPackageObject>>,
   options: Partial<IOptions> = {},
-) {
+): IPackageObject {
   const state: ITransformedDependencies = {};
 
   const saveDependencies = (
