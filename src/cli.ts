@@ -46,12 +46,13 @@ const options = commandLineArgs([
     }),
   );
 
-  const mergedPackages = mergePackages(packages, options);
-  const packageJson = JSON.stringify(Object.assign(defaultParams, mergedPackages), null, 2);
+  const mergedDependencies = mergePackages(packages, options);
+  const result = Object.assign({}, defaultParams, mergedDependencies);
+  const jsonText = JSON.stringify(result, null, 2);
 
-  writeFileSync(options.outFile, packageJson);
+  writeFileSync(options.outFile, jsonText);
   console.log(chalk.greenBright(
-    `dependencies: ${sizeOf(mergedPackages.dependencies)};\n` +
-    `devDependencies: ${sizeOf(mergedPackages.devDependencies)};`,
+    `dependencies: ${sizeOf(result.dependencies)};\n` +
+    `devDependencies: ${sizeOf(result.devDependencies)};`,
   ));
 })();
