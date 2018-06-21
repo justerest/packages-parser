@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.0.0"></a>
+# [1.0.0](https://github.com/justerest/packages-parser/compare/v0.2.2...v1.0.0) (2018-06-21)
+
+
+### Bug Fixes
+
+* bug with "/" in end of link ([4fefe88](https://github.com/justerest/packages-parser/commit/4fefe88))
+* double error message if bad outFile ([a456d75](https://github.com/justerest/packages-parser/commit/a456d75))
+
+
+
 <a name="0.2.2"></a>
 ## [0.2.2](https://github.com/justerest/packages-parser/compare/v0.2.1...v0.2.2) (2018-06-17)
 
