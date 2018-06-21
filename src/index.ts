@@ -4,7 +4,6 @@ import { IDependencies, IOptions, IPackageObject, ITransformedDependencies } fro
 
 /**
  * Merges packages dependencies
- * @param {{ dependencies?: any, devDependencies?: any }[]} packages
  * @param options.filter Returns only `prod` or `dev` dependencies
  * @param options.latest Replace versions with `"latest"`
  * @param options.save Save all dependencies as `prod`
