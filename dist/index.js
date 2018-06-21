@@ -39,7 +39,6 @@ var fs_1 = require("fs");
 var node_fetch_1 = require("node-fetch");
 /**
  * Merges packages dependencies
- * @param {{ dependencies?: any, devDependencies?: any }[]} packages
  * @param options.filter Returns only `prod` or `dev` dependencies
  * @param options.latest Replace versions with `"latest"`
  * @param options.save Save all dependencies as `prod`
@@ -113,19 +112,23 @@ function parseProject(path) {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 3, , 4]);
-                    link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
-                    return [4 /*yield*/, node_fetch_1.default(link)];
+                    link = path.replace('github', 'raw.githubusercontent')
+                        .replace(/\/*$/, '')
+                        .concat('/master/package.json');
+                    _a.label = 1;
                 case 1:
+                    _a.trys.push([1, 4, , 5]);
+                    return [4 /*yield*/, node_fetch_1.default(link)];
+                case 2:
                     response = _a.sent();
                     return [4 /*yield*/, response.text()];
-                case 2:
+                case 3:
                     text = _a.sent();
                     return [2 /*return*/, parseText(text)];
-                case 3:
+                case 4:
                     e_1 = _a.sent();
                     throw new Error(path + ': ' + e_1.message + '\n');
-                case 4: return [2 /*return*/];
+                case 5: return [2 /*return*/];
             }
         });
     });

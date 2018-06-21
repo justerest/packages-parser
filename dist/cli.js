@@ -52,7 +52,7 @@ var options = commandLineArgs([
 ]);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var defaultParams, packages, mergedPackages, packageJson;
+        var defaultParams, packages, mergedDependencies, result, jsonText;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -61,6 +61,8 @@ var options = commandLineArgs([
                     if (fs_1.existsSync(options.outFile)) {
                         try {
                             Object.assign(defaultParams, JSON.parse(fs_1.readFileSync(options.outFile, 'utf-8')));
+                            if (!options.rewrite)
+                                options.paths.push(options.outFile);
                         }
                         catch (e) {
                             utils_1.warn(options.outFile + ': Bad output file. ' + e.message + '\n');
@@ -69,8 +71,6 @@ var options = commandLineArgs([
                             }
                         }
                     }
-                    if (!options.rewrite)
-                        options.paths.push(options.outFile);
                     return [4 /*yield*/, Promise.all(options.paths.filter(utils_1.unique()).map(function (path) { return __awaiter(_this, void 0, void 0, function () {
                             var _a, e_1;
                             return __generator(this, function (_b) {
@@ -96,11 +96,12 @@ var options = commandLineArgs([
                         }); }))];
                 case 1:
                     packages = _a.sent();
-                    mergedPackages = _1.mergePackages(packages, options);
-                    packageJson = JSON.stringify(Object.assign(defaultParams, mergedPackages), null, 2);
-                    fs_1.writeFileSync(options.outFile, packageJson);
-                    console.log(chalk_1.default.greenBright("dependencies: " + utils_1.sizeOf(mergedPackages.dependencies) + ";\n" +
-                        ("devDependencies: " + utils_1.sizeOf(mergedPackages.devDependencies) + ";")));
+                    mergedDependencies = _1.mergePackages(packages, options);
+                    result = Object.assign({}, defaultParams, mergedDependencies);
+                    jsonText = JSON.stringify(result, null, 2);
+                    fs_1.writeFileSync(options.outFile, jsonText);
+                    console.log(chalk_1.default.greenBright("dependencies: " + utils_1.sizeOf(result.dependencies) + ";\n" +
+                        ("devDependencies: " + utils_1.sizeOf(result.devDependencies) + ";")));
                     return [2 /*return*/];
             }
         });
