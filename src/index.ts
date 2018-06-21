@@ -86,8 +86,10 @@ export function parseFile(path: string): IPackageObject {
  * Parses `dependencies` and `devDependencies` fields from package.json of GitHub project.
  */
 export async function parseProject(path: string): Promise<IPackageObject> {
+  const link = path.replace('github', 'raw.githubusercontent')
+    .replace(/\/*$/, '')
+    .concat('/master/package.json');
   try {
-    const link = path.replace('github', 'raw.githubusercontent') + '/master/package.json';
     const response = await fetch(link);
     const text = await response.text();
     return parseText(text);
