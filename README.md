@@ -27,7 +27,7 @@ Options are not required
 | --------- | ----- | ---------------- | ------------------ | ----------------------------------------- |
 | outFile   | -o    | `string`         | `'./package.json'` | Path to outFile  __(cli only)__           |
 | rewrite   | -r    | `boolean`        | `false`            | Does rewrites outFile __(cli only)__      |
-| filter    | -f    | `'prod' | 'dev'` | `false`            | Returns only `prod` or `dev` dependencies |
+| filter    | -f    | `'prod', 'dev'`  | `false`            | Returns only `prod` or `dev` dependencies |
 | latest    | -l    | `boolean`        | `false`            | Replaces versions with `'latest'`         |
 | save      | -s    | `boolean`        | `false`            | Saves all dependencies as `dependencies`  |
 | saveOrder |       | `boolean`        | `false`            | Doesn't sort dependencies                 |
