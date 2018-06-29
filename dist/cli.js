@@ -37,10 +37,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
-var commandLineArgs = require("command-line-args");
 var fs_1 = require("fs");
-var _1 = require("./");
-var utils_1 = require("./utils");
+var _1 = require(".");
+var sizeOf_1 = require("./utils/sizeOf");
+var unique_1 = require("./utils/unique");
+var warn_1 = require("./utils/warn");
+var commandLineArgs = require("command-line-args");
 var options = commandLineArgs([
     { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
     { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
@@ -65,13 +67,13 @@ var options = commandLineArgs([
                                 options.paths.push(options.outFile);
                         }
                         catch (e) {
-                            utils_1.warn(options.outFile + ': Bad output file. ' + e.message + '\n');
+                            warn_1.warn(options.outFile + ': Bad output file. ' + e.message + '\n');
                             if (!options.rewrite) {
                                 throw new Error(chalk_1.default.bgRed('Use --rewrite (-r) option to override bad output file'));
                             }
                         }
                     }
-                    return [4 /*yield*/, Promise.all(options.paths.filter(utils_1.unique()).map(function (path) { return __awaiter(_this, void 0, void 0, function () {
+                    return [4 /*yield*/, Promise.all(options.paths.filter(unique_1.unique()).map(function (path) { return __awaiter(_this, void 0, void 0, function () {
                             var _a, e_1;
                             return __generator(this, function (_b) {
                                 switch (_b.label) {
@@ -88,7 +90,7 @@ var options = commandLineArgs([
                                     case 3: return [2 /*return*/, _a];
                                     case 4:
                                         e_1 = _b.sent();
-                                        utils_1.warn(e_1.message);
+                                        warn_1.warn(e_1.message);
                                         return [2 /*return*/, {}];
                                     case 5: return [2 /*return*/];
                                 }
@@ -100,8 +102,8 @@ var options = commandLineArgs([
                     result = Object.assign({}, defaultParams, mergedDependencies);
                     jsonText = JSON.stringify(result, null, 2);
                     fs_1.writeFileSync(options.outFile, jsonText);
-                    console.log(chalk_1.default.greenBright("dependencies: " + utils_1.sizeOf(result.dependencies) + ";\n" +
-                        ("devDependencies: " + utils_1.sizeOf(result.devDependencies) + ";")));
+                    console.log(chalk_1.default.greenBright("dependencies: " + sizeOf_1.sizeOf(result.dependencies) + ";\n" +
+                        ("devDependencies: " + sizeOf_1.sizeOf(result.devDependencies) + ";")));
                     return [2 /*return*/];
             }
         });
