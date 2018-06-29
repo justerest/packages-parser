@@ -1,10 +1,15 @@
 #!/usr/bin/env node
+
 import chalk from 'chalk';
-import commandLineArgs = require('command-line-args');
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { mergePackages, parseFile, parseProject } from './';
-import { IOptions } from './models';
-import { sizeOf, unique, warn } from './utils';
+
+import { mergePackages, parseFile, parseProject } from '.';
+import { IOptions } from './models/IOptions';
+import { sizeOf } from './utils/sizeOf';
+import { unique } from './utils/unique';
+import { warn } from './utils/warn';
+
+import commandLineArgs = require('command-line-args');
 
 const options = commandLineArgs([
   { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
