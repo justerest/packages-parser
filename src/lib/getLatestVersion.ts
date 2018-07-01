@@ -3,14 +3,12 @@ const VERSION_FORMAT = /^(\~|\^)?\d*\.\d*\.\d*$/;
 /**
  * Returns latest version from all
  * @example
- * ```javascript
  * getLatestVersion('^2.0.0', '^1.0.0') // '^2.0.0'
  * getLatestVersion('^2.0.0', '~1.0.0') // '~1.0.0'
  * getLatestVersion('latest', '^2.0.0') // 'latest'
  * getLatestVersion('latest', '~1.0.0') // '~1.0.0'
  * getLatestVersion('latest', 'next') // 'next'
  * getLatestVersion() // 'latest'
- * ```
  */
 export function getLatestVersion(...versions: string[]) {
   const latestVersion = versions.filter(Boolean)
@@ -34,7 +32,7 @@ function convertVersions(converter: (version: string) => string) {
 /**
  * Inserts `0` into start of versions
  * @example
- * // 2.10.0 -> 002.010.000
+ * padZeroes('2.10.0') // 002.010.000
  */
 function padZeroes(version: string): string {
   return version.split('.')
@@ -45,7 +43,7 @@ function padZeroes(version: string): string {
 /**
  * Removes `0` from start of versions
  * @example
- * // 002.010.000 -> 2.10.0
+ * trimZeroes('002.010.000') // 2.10.0
  */
 function trimZeroes(version: string): string {
   return version.split('.')
