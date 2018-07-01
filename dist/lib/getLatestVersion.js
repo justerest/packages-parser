@@ -1,6 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var VERSION_FORMAT = /^(\~|\^)?\d*\.\d*\.\d*$/;
+/**
+ * Returns latest version from all
+ * @example
+ * ```javascript
+ * getLatestVersion('^2.0.0', '^1.0.0') // '^2.0.0'
+ * getLatestVersion('^2.0.0', '~1.0.0') // '~1.0.0'
+ * getLatestVersion('latest', '^2.0.0') // 'latest'
+ * getLatestVersion('latest', '~1.0.0') // '~1.0.0'
+ * getLatestVersion('latest', 'next') // 'next'
+ * getLatestVersion() // 'latest'
+ * ```
+ */
 function getLatestVersion() {
     var versions = [];
     for (var _i = 0; _i < arguments.length; _i++) {
