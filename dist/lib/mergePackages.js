@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var PackageObject_1 = require("../models/PackageObject");
-var getLatestVersion_1 = require("../utils/getLatestVersion");
+var getLatestVersion_1 = require("./getLatestVersion");
 var state;
 /**
  * Merges packages dependencies
@@ -27,6 +27,17 @@ function mergePackages(packages, options) {
     }, new PackageObject_1.PackageObject());
 }
 exports.mergePackages = mergePackages;
+function saveDependencies(dependencies, type) {
+    if (dependencies === void 0) { dependencies = {}; }
+    if (type === void 0) { type = 'prod'; }
+    Object.keys(dependencies).forEach(function (packageName) {
+        var savedDependency = state[packageName] || { version: '', isProd: false };
+        state[packageName] = {
+            version: getLatestVersion_1.getLatestVersion(savedDependency.version, dependencies[packageName]),
+            isProd: savedDependency.isProd || type !== 'dev',
+        };
+    });
+}
 function applyOptions(options) {
     var packagesNames = Object.keys(state);
     if (!options.saveOrder)
@@ -44,17 +55,4 @@ function applyOptions(options) {
         }
         return container;
     }, {});
-}
-function saveDependencies(dependencies, type) {
-    if (dependencies === void 0) { dependencies = {}; }
-    if (type === void 0) { type = 'prod'; }
-    Object.keys(dependencies).forEach(function (packageName) {
-        var savedDependency = state[packageName] || {};
-        var savedVersion = savedDependency.version || '^0.0.0';
-        var version = dependencies[packageName];
-        state[packageName] = {
-            version: getLatestVersion_1.getLatestVersion(savedVersion, version),
-            isProd: savedDependency.isProd || type !== 'dev',
-        };
-    });
 }

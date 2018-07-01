@@ -7,11 +7,10 @@ var PackageObject_1 = require("../models/PackageObject");
 function parseText(text) {
     try {
         var _a = JSON.parse(text), dependencies = _a.dependencies, devDependencies = _a.devDependencies;
-        if (dependencies || devDependencies) {
-            return new PackageObject_1.PackageObject(dependencies, devDependencies);
-        }
-        else
+        if (!dependencies && !devDependencies) {
             throw new Error('Dependencies fields not found.');
+        }
+        return new PackageObject_1.PackageObject(dependencies, devDependencies);
     }
     catch (e) {
         throw new Error('Error in package.json format. ' + e.message);

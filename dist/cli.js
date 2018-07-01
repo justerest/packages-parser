@@ -37,12 +37,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var chalk_1 = require("chalk");
+var commandLineArgs = require("command-line-args");
 var fs_1 = require("fs");
 var _1 = require(".");
+var PackageObject_1 = require("./models/PackageObject");
 var sizeOf_1 = require("./utils/sizeOf");
 var unique_1 = require("./utils/unique");
 var warn_1 = require("./utils/warn");
-var commandLineArgs = require("command-line-args");
 var options = commandLineArgs([
     { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
     { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
@@ -59,7 +60,8 @@ var options = commandLineArgs([
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    defaultParams = { name: 'parsed-packages' };
+                    defaultParams = new PackageObject_1.PackageObject();
+                    defaultParams.name = 'parsed-packages';
                     if (fs_1.existsSync(options.outFile)) {
                         try {
                             Object.assign(defaultParams, JSON.parse(fs_1.readFileSync(options.outFile, 'utf-8')));
