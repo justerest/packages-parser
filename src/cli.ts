@@ -20,12 +20,12 @@ const options = commandLineArgs([
 ]) as IOptions;
 
 (async function main() {
-  const defaultParams = new PackageObject();
-  defaultParams.name = 'parsed-packages';
+  const packageJson = new PackageObject();
+  packageJson.name = 'parsed-packages';
 
   if (existsSync(options.outFile)) {
     try {
-      Object.assign(defaultParams, JSON.parse(readFileSync(options.outFile, 'utf-8')));
+      Object.assign(packageJson, JSON.parse(readFileSync(options.outFile, 'utf-8')));
       if (!options.rewrite) options.paths.push(options.outFile);
     }
     catch (e) {
@@ -50,13 +50,11 @@ const options = commandLineArgs([
     }),
   );
 
-  const mergedDependencies = mergePackages(packages, options);
-  const result = Object.assign({}, defaultParams, mergedDependencies);
-  const jsonText = JSON.stringify(result, null, 2);
+  Object.assign(packageJson, mergePackages(packages, options));
 
-  writeFileSync(options.outFile, jsonText);
+  writeFileSync(options.outFile, JSON.stringify(packageJson, null, 2));
   console.log(chalk.greenBright(
-    `dependencies: ${sizeOf(result.dependencies)};\n` +
-    `devDependencies: ${sizeOf(result.devDependencies)};`,
+    `dependencies: ${sizeOf(packageJson.dependencies)};\n` +
+    `devDependencies: ${sizeOf(packageJson.devDependencies)};`,
   ));
 })();
