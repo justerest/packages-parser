@@ -15,6 +15,7 @@ export async function parseProject(path: string): Promise<PackageObject> {
     return parseText(text);
   }
   catch (e) {
-    throw new Error(path + ': ' + e.message + '\n');
+    e.message = path + ': ' + e.message + '\n';
+    throw e;
   }
 }

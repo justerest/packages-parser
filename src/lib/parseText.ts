@@ -12,6 +12,7 @@ export function parseText(text: string): PackageObject {
     return new PackageObject(dependencies, devDependencies);
   }
   catch (e) {
-    throw new Error('Error in package.json format. ' + e.message);
+    e.message = 'Error in package.json format. ' + e.message;
+    throw e;
   }
 }
