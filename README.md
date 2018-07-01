@@ -34,27 +34,25 @@ Options are not required
 
 ## API
 ```ts
-interface IDependencies {
-  [name: string]: string;
-}
-
 interface IPackageObject {
   [key: string]: any;
   dependencies: IDependencies;
   devDependencies: IDependencies;
 }
 
+interface IDependencies {
+  [name: string]: string;
+}
+
 /**
  * Returns latest version from all
  * @example
- * ```javascript
  * getLatestVersion('^2.0.0', '^1.0.0') // '^2.0.0'
  * getLatestVersion('^2.0.0', '~1.0.0') // '~1.0.0'
  * getLatestVersion('latest', '^2.0.0') // 'latest'
  * getLatestVersion('latest', '~1.0.0') // '~1.0.0'
  * getLatestVersion('latest', 'next') // 'next'
  * getLatestVersion() // 'latest'
- * ```
  */
 function getLatestVersion(...versions: string[]): string
 
