@@ -1,5 +1,4 @@
 import { readFileSync } from 'fs';
-
 import { PackageObject } from '../models/PackageObject';
 import { parseText } from './parseText';
 

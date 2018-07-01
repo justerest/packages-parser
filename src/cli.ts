@@ -1,15 +1,13 @@
 #!/usr/bin/env node
-
 import chalk from 'chalk';
+import commandLineArgs = require('command-line-args');
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-
 import { mergePackages, parseFile, parseProject } from '.';
 import { IOptions } from './models/IOptions';
+import { PackageObject } from './models/PackageObject';
 import { sizeOf } from './utils/sizeOf';
 import { unique } from './utils/unique';
 import { warn } from './utils/warn';
-
-import commandLineArgs = require('command-line-args');
 
 const options = commandLineArgs([
   { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
@@ -22,7 +20,8 @@ const options = commandLineArgs([
 ]) as IOptions;
 
 (async function main() {
-  const defaultParams = { name: 'parsed-packages' } as { [name: string]: any };
+  const defaultParams = new PackageObject();
+  defaultParams.name = 'parsed-packages';
 
   if (existsSync(options.outFile)) {
     try {

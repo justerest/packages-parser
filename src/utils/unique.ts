@@ -6,8 +6,7 @@
 export function unique() {
   const incluededValues = new Set();
   return (el: any) => {
-    if (incluededValues.has(el))
-      return false;
+    if (incluededValues.has(el)) return false;
     else {
       incluededValues.add(el);
       return true;

@@ -6,11 +6,10 @@ import { PackageObject } from '../models/PackageObject';
 export function parseText(text: string): PackageObject {
   try {
     const { dependencies, devDependencies }: Partial<PackageObject> = JSON.parse(text);
-    if (dependencies || devDependencies) {
-      return new PackageObject(dependencies, devDependencies);
-    }
-    else
+    if (!dependencies && !devDependencies) {
       throw new Error('Dependencies fields not found.');
+    }
+    return new PackageObject(dependencies, devDependencies);
   }
   catch (e) {
     throw new Error('Error in package.json format. ' + e.message);
