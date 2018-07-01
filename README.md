@@ -23,14 +23,14 @@ npx packages-parser [options] <...paths to package.json or links of GitHub proje
 ## Options
 Options are not required
 
-| Option    | Alias | Type             | Default            | Description                               |
-| --------- | ----- | ---------------- | ------------------ | ----------------------------------------- |
-| outFile   | -o    | `string`         | `'./package.json'` | Path to outFile  __(cli only)__           |
-| rewrite   | -r    | `boolean`        | `false`            | Does rewrites outFile __(cli only)__      |
-| filter    | -f    | `'prod', 'dev'`  | `false`            | Returns only `prod` or `dev` dependencies |
-| latest    | -l    | `boolean`        | `false`            | Replaces versions with `'latest'`         |
-| save      | -s    | `boolean`        | `false`            | Saves all dependencies as `dependencies`  |
-| saveOrder |       | `boolean`        | `false`            | Doesn't sort dependencies                 |
+| Option    | Alias | Type            | Default            | Description                               |
+| --------- | ----- | --------------- | ------------------ | ----------------------------------------- |
+| outFile   | -o    | `string`        | `'./package.json'` | Path to outFile  __(cli only)__           |
+| rewrite   | -r    | `boolean`       | `false`            | Does rewrites outFile __(cli only)__      |
+| filter    | -f    | `'prod', 'dev'` | `false`            | Returns only `prod` or `dev` dependencies |
+| latest    | -l    | `boolean`       | `false`            | Replaces versions with `'latest'`         |
+| save      | -s    | `boolean`       | `false`            | Saves all dependencies as `dependencies`  |
+| saveOrder |       | `boolean`       | `false`            | Doesn't sort dependencies                 |
 
 ## API
 ```ts
@@ -43,6 +43,20 @@ interface IPackageObject {
   dependencies: IDependencies;
   devDependencies: IDependencies;
 }
+
+/**
+ * Returns latest version from all
+ * @example
+ * ```javascript
+ * getLatestVersion('^2.0.0', '^1.0.0') // '^2.0.0'
+ * getLatestVersion('^2.0.0', '~1.0.0') // '~1.0.0'
+ * getLatestVersion('latest', '^2.0.0') // 'latest'
+ * getLatestVersion('latest', '~1.0.0') // '~1.0.0'
+ * getLatestVersion('latest', 'next') // 'next'
+ * getLatestVersion() // 'latest'
+ * ```
+ */
+function getLatestVersion(...versions: string[]): string
 
 /**
  * Merges packages dependencies
