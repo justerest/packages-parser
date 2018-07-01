@@ -2,7 +2,7 @@ import { IDependencies } from '../models/IDependencies';
 import { IOptions } from '../models/IOptions';
 import { ITransformedDependencies } from '../models/ITransformedDependencies';
 import { PackageObject } from '../models/PackageObject';
-import { getLatestVersion } from '../utils/getLatestVersion';
+import { getLatestVersion } from './getLatestVersion';
 
 let state: ITransformedDependencies;
 
@@ -29,11 +29,22 @@ export function mergePackages(
   return Object.keys(state).reduce((result, key) => {
     const { version, isProd } = state[key];
     const type = isProd ? 'dependencies' : 'devDependencies';
-
     result[type][key] = version;
-
     return result;
   }, new PackageObject());
+}
+
+function saveDependencies(
+  dependencies: IDependencies = {},
+  type: IOptions['filter'] = 'prod',
+) {
+  Object.keys(dependencies).forEach((packageName) => {
+    const savedDependency = state[packageName] || { version: '', isProd: false };
+    state[packageName] = {
+      version: getLatestVersion(savedDependency.version, dependencies[packageName]),
+      isProd: savedDependency.isProd || type !== 'dev',
+    };
+  });
 }
 
 function applyOptions(options: Partial<IOptions>) {
@@ -55,21 +66,4 @@ function applyOptions(options: Partial<IOptions>) {
 
     return container;
   }, {} as ITransformedDependencies);
-}
-
-function saveDependencies(
-  dependencies: IDependencies = {},
-  type: IOptions['filter'] = 'prod',
-) {
-  Object.keys(dependencies).forEach((packageName) => {
-    const savedDependency = state[packageName] || {};
-
-    const savedVersion = savedDependency.version || '^0.0.0';
-    const version = dependencies[packageName];
-
-    state[packageName] = {
-      version: getLatestVersion(savedVersion, version),
-      isProd: savedDependency.isProd || type !== 'dev',
-    };
-  });
 }
