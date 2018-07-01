@@ -3,12 +3,13 @@
   "version": "1.1.0",
   "description": "Gets projects dependencies and merges they to single package.json file",
   "keywords": [
-    "merge dependencies",
-    "merge package.json",
-    "merge packages",
-    "parse dependencies",
-    "parse package.json",
-    "parse packages"
+    "merge",
+    "dependencies",
+    "package.json",
+    "packages",
+    "parse",
+    "latest",
+    "version"
   ],
   "bin": "./dist/cli.js",
   "main": "./dist/index.js",
