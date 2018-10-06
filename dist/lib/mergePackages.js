@@ -1,58 +1,62 @@
 "use strict";
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spread = (this && this.__spread) || function () {
+    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
+    return ar;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var PackageObject_1 = require("../models/PackageObject");
 var getLatestVersion_1 = require("./getLatestVersion");
-var state;
+var state = new Map();
 /**
  * Merges packages dependencies
- * @param options.filter Returns only `prod` or `dev` dependencies
- * @param options.latest Replace versions with `"latest"`
- * @param options.save Save all dependencies as `prod`
- * @param options.saveOrder Doesn't change dependencies order
  */
-function mergePackages(packages, options) {
-    if (options === void 0) { options = {}; }
-    state = {};
+function mergePackages(packages) {
+    state.clear();
     packages.forEach(function (_a) {
         var dependencies = _a.dependencies, devDependencies = _a.devDependencies;
-        saveDependencies(dependencies, 'prod');
-        saveDependencies(devDependencies, 'dev');
+        saveDependencies(1 /* PROD */, dependencies);
+        saveDependencies(0 /* DEV */, devDependencies);
     });
-    applyOptions(options);
-    return Object.keys(state).reduce(function (result, key) {
-        var _a = state[key], version = _a.version, isProd = _a.isProd;
-        var type = isProd ? 'dependencies' : 'devDependencies';
-        result[type][key] = version;
+    return __spread(state.entries()).reduce(function (result, _a) {
+        var _b = __read(_a, 2), packageName = _b[0], dependency = _b[1];
+        var dependencyType = dependency.type === 1 /* PROD */ ? 'dependencies' : 'devDependencies';
+        result[dependencyType][packageName] = dependency.version;
         return result;
-    }, new PackageObject_1.PackageObject());
+    }, { dependencies: {}, devDependencies: {} });
 }
 exports.mergePackages = mergePackages;
-function saveDependencies(dependencies, type) {
+function saveDependencies(type, dependencies) {
     if (dependencies === void 0) { dependencies = {}; }
-    if (type === void 0) { type = 'prod'; }
     Object.keys(dependencies).forEach(function (packageName) {
-        var savedDependency = state[packageName] || { version: '', isProd: false };
-        state[packageName] = {
-            version: getLatestVersion_1.getLatestVersion(savedDependency.version, dependencies[packageName]),
-            isProd: savedDependency.isProd || type !== 'dev',
-        };
+        var defaultValue = { version: '', type: 0 /* DEV */ };
+        var currentDependency = state.has(packageName)
+            ? state.get(packageName)
+            : defaultValue;
+        state.set(packageName, {
+            version: getLatestVersion_1.getLatestVersion(currentDependency.version, dependencies[packageName]),
+            type: getMaxDependencyType(currentDependency.type, type),
+        });
     });
 }
-function applyOptions(options) {
-    var packagesNames = Object.keys(state);
-    if (!options.saveOrder)
-        packagesNames.sort();
-    state = packagesNames.reduce(function (container, packageName) {
-        var dependency = Object.assign({}, state[packageName]);
-        var isFilterPassed = ((options.filter !== 'dev' && dependency.isProd ||
-            options.filter !== 'prod' && !dependency.isProd));
-        if (isFilterPassed) {
-            if (options.latest)
-                dependency.version = 'latest';
-            if (options.save)
-                dependency.isProd = true;
-            container[packageName] = dependency;
-        }
-        return container;
-    }, {});
+function getMaxDependencyType() {
+    var types = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        types[_i] = arguments[_i];
+    }
+    return types.sort().pop();
 }

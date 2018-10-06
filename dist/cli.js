@@ -40,42 +40,29 @@ var chalk_1 = require("chalk");
 var commandLineArgs = require("command-line-args");
 var fs_1 = require("fs");
 var _1 = require(".");
-var PackageObject_1 = require("./models/PackageObject");
 var sizeOf_1 = require("./utils/sizeOf");
-var unique_1 = require("./utils/unique");
 var warn_1 = require("./utils/warn");
 var options = commandLineArgs([
     { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
-    { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
-    { name: 'rewrite', alias: 'r', type: Boolean },
-    { name: 'filter', alias: 'f', type: String, defaultValue: 'none' },
-    { name: 'latest', alias: 'l', type: Boolean },
-    { name: 'save', alias: 's', type: Boolean },
-    { name: 'saveOrder', type: Boolean },
+    { name: 'out', alias: 'o', type: String, defaultValue: './package.json' },
 ]);
 (function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var defaultParams, packages, mergedDependencies, result, jsonText;
+        var packageJson, packages;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    defaultParams = new PackageObject_1.PackageObject();
-                    defaultParams.name = 'parsed-packages';
-                    if (fs_1.existsSync(options.outFile)) {
+                    packageJson = {};
+                    if (fs_1.existsSync(options.out)) {
                         try {
-                            Object.assign(defaultParams, JSON.parse(fs_1.readFileSync(options.outFile, 'utf-8')));
-                            if (!options.rewrite)
-                                options.paths.push(options.outFile);
+                            Object.assign(packageJson, JSON.parse(fs_1.readFileSync(options.out, 'utf-8')));
                         }
                         catch (e) {
-                            warn_1.warn(options.outFile + ': Bad output file. ' + e.message + '\n');
-                            if (!options.rewrite) {
-                                throw new Error(chalk_1.default.bgRed('Use --rewrite (-r) option to override bad output file'));
-                            }
+                            warn_1.warn(options.out + ': Bad output file. ' + e.message + '\n');
                         }
                     }
-                    return [4 /*yield*/, Promise.all(options.paths.filter(unique_1.unique()).map(function (path) { return __awaiter(_this, void 0, void 0, function () {
+                    return [4 /*yield*/, Promise.all(options.paths.map(function (path) { return __awaiter(_this, void 0, void 0, function () {
                             var _a, e_1;
                             return __generator(this, function (_b) {
                                 switch (_b.label) {
@@ -100,12 +87,10 @@ var options = commandLineArgs([
                         }); }))];
                 case 1:
                     packages = _a.sent();
-                    mergedDependencies = _1.mergePackages(packages, options);
-                    result = Object.assign({}, defaultParams, mergedDependencies);
-                    jsonText = JSON.stringify(result, null, 2);
-                    fs_1.writeFileSync(options.outFile, jsonText);
-                    console.log(chalk_1.default.greenBright("dependencies: " + sizeOf_1.sizeOf(result.dependencies) + ";\n" +
-                        ("devDependencies: " + sizeOf_1.sizeOf(result.devDependencies) + ";")));
+                    Object.assign(packageJson, _1.mergePackages(packages));
+                    fs_1.writeFileSync(options.out, JSON.stringify(packageJson, null, 2));
+                    console.log(chalk_1.default.greenBright("dependencies: " + sizeOf_1.sizeOf(packageJson.dependencies) + ";\n" +
+                        ("devDependencies: " + sizeOf_1.sizeOf(packageJson.devDependencies) + ";")));
                     return [2 /*return*/];
             }
         });

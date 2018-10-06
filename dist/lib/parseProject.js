@@ -61,7 +61,8 @@ function parseProject(path) {
                     return [2 /*return*/, parseText_1.parseText(text)];
                 case 4:
                     e_1 = _a.sent();
-                    throw new Error(path + ': ' + e_1.message + '\n');
+                    e_1.message = path + ': ' + e_1.message + '\n';
+                    throw e_1;
                 case 5: return [2 /*return*/];
             }
         });
