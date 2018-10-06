@@ -1,69 +1,42 @@
 import { IDependencies } from '../models/IDependencies';
-import { IOptions } from '../models/IOptions';
-import { ITransformedDependencies } from '../models/ITransformedDependencies';
-import { PackageObject } from '../models/PackageObject';
+import { IPackageObject } from '../models/IPackageObject';
+import { DependencyType, ITransformedDependency } from '../models/ITransformedDependencies';
 import { getLatestVersion } from './getLatestVersion';
 
-let state: ITransformedDependencies;
+const state: Map<string, ITransformedDependency> = new Map();
 
 /**
  * Merges packages dependencies
- * @param options.filter Returns only `prod` or `dev` dependencies
- * @param options.latest Replace versions with `"latest"`
- * @param options.save Save all dependencies as `prod`
- * @param options.saveOrder Doesn't change dependencies order
  */
-export function mergePackages(
-  packages: Array<Partial<PackageObject>>,
-  options: Partial<IOptions> = {},
-): PackageObject {
-  state = {};
+export function mergePackages(packages: IPackageObject[]): Required<IPackageObject> {
+  state.clear();
 
   packages.forEach(({ dependencies, devDependencies }) => {
-    saveDependencies(dependencies, 'prod');
-    saveDependencies(devDependencies, 'dev');
+    saveDependencies(DependencyType.PROD, dependencies);
+    saveDependencies(DependencyType.DEV, devDependencies);
   });
 
-  applyOptions(options);
-
-  return Object.keys(state).reduce((result, key) => {
-    const { version, isProd } = state[key];
-    const type = isProd ? 'dependencies' : 'devDependencies';
-    result[type][key] = version;
+  return [...state.entries()].reduce((result, [packageName, dependency]) => {
+    const dependencyType = dependency.type === DependencyType.PROD ? 'dependencies' : 'devDependencies';
+    result[dependencyType][packageName] = dependency.version;
     return result;
-  }, new PackageObject());
+  }, { dependencies: {}, devDependencies: {} });
 }
 
-function saveDependencies(
-  dependencies: IDependencies = {},
-  type: IOptions['filter'] = 'prod',
-) {
+function saveDependencies(type: DependencyType, dependencies: IDependencies = {}) {
   Object.keys(dependencies).forEach((packageName) => {
-    const savedDependency = state[packageName] || { version: '', isProd: false };
-    state[packageName] = {
-      version: getLatestVersion(savedDependency.version, dependencies[packageName]),
-      isProd: savedDependency.isProd || type !== 'dev',
-    };
+    const defaultValue = { version: '', type: DependencyType.DEV };
+    const currentDependency: ITransformedDependency = state.has(packageName)
+      ? state.get(packageName)
+      : defaultValue;
+
+    state.set(packageName, {
+      version: getLatestVersion(currentDependency.version, dependencies[packageName]),
+      type: getMaxDependencyType(currentDependency.type, type),
+    });
   });
 }
 
-function applyOptions(options: Partial<IOptions>) {
-  const packagesNames = Object.keys(state);
-  if (!options.saveOrder) packagesNames.sort();
-
-  state = packagesNames.reduce((container, packageName) => {
-    const dependency = Object.assign({}, state[packageName]);
-    const isFilterPassed = ((
-      options.filter !== 'dev' && dependency.isProd ||
-      options.filter !== 'prod' && !dependency.isProd
-    ));
-
-    if (isFilterPassed) {
-      if (options.latest) dependency.version = 'latest';
-      if (options.save) dependency.isProd = true;
-      container[packageName] = dependency;
-    }
-
-    return container;
-  }, {} as ITransformedDependencies);
+function getMaxDependencyType(...types: DependencyType[]): DependencyType {
+  return types.sort().pop();
 }

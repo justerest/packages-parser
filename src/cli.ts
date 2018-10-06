@@ -4,40 +4,29 @@ import commandLineArgs = require('command-line-args');
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { mergePackages, parseFile, parseProject } from '.';
 import { IOptions } from './models/IOptions';
-import { PackageObject } from './models/PackageObject';
+import { IPackageObject } from './models/IPackageObject';
 import { sizeOf } from './utils/sizeOf';
-import { unique } from './utils/unique';
 import { warn } from './utils/warn';
 
 const options = commandLineArgs([
   { name: 'paths', multiple: true, defaultOption: true, defaultValue: [] },
-  { name: 'outFile', alias: 'o', type: String, defaultValue: './package.json' },
-  { name: 'rewrite', alias: 'r', type: Boolean },
-  { name: 'filter', alias: 'f', type: String, defaultValue: 'none' },
-  { name: 'latest', alias: 'l', type: Boolean },
-  { name: 'save', alias: 's', type: Boolean },
-  { name: 'saveOrder', type: Boolean },
+  { name: 'out', alias: 'o', type: String, defaultValue: './package.json' },
 ]) as IOptions;
 
 (async function main() {
-  const packageJson = new PackageObject();
-  packageJson.name = 'parsed-packages';
+  const packageJson: IPackageObject = {};
 
-  if (existsSync(options.outFile)) {
+  if (existsSync(options.out)) {
     try {
-      Object.assign(packageJson, JSON.parse(readFileSync(options.outFile, 'utf-8')));
-      if (!options.rewrite) options.paths.push(options.outFile);
+      Object.assign(packageJson, JSON.parse(readFileSync(options.out, 'utf-8')));
     }
     catch (e) {
-      warn(options.outFile + ': Bad output file. ' + e.message + '\n');
-      if (!options.rewrite) {
-        throw new Error(chalk.bgRed('Use --rewrite (-r) option to override bad output file'));
-      }
+      warn(options.out + ': Bad output file. ' + e.message + '\n');
     }
   }
 
   const packages = await Promise.all(
-    options.paths.filter(unique()).map(async (path) => {
+    options.paths.map(async (path) => {
       try {
         return path.match(/^http/i)
           ? await parseProject(path)
@@ -50,9 +39,9 @@ const options = commandLineArgs([
     }),
   );
 
-  Object.assign(packageJson, mergePackages(packages, options));
+  Object.assign(packageJson, mergePackages(packages));
 
-  writeFileSync(options.outFile, JSON.stringify(packageJson, null, 2));
+  writeFileSync(options.out, JSON.stringify(packageJson, null, 2));
   console.log(chalk.greenBright(
     `dependencies: ${sizeOf(packageJson.dependencies)};\n` +
     `devDependencies: ${sizeOf(packageJson.devDependencies)};`,

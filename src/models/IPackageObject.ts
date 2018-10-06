@@ -13,10 +13,7 @@ import { IDependencies } from './IDependencies';
  * };
  * ```
  */
-export class PackageObject {
-  [key: string]: any;
-  constructor(
-    public dependencies: IDependencies = {},
-    public devDependencies: IDependencies = {},
-  ) { }
+export interface IPackageObject {
+  dependencies?: IDependencies;
+  devDependencies?: IDependencies;
 }

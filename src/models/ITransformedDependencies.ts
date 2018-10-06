@@ -1,3 +1,8 @@
+export const enum DependencyType {
+  DEV,
+  PROD,
+}
+
 /**
  * @example
  * ```javascript
@@ -9,9 +14,7 @@
  * };
  * ```
  */
-export interface ITransformedDependencies {
-  [name: string]: {
-    version: string;
-    isProd: boolean;
-  };
+export interface ITransformedDependency {
+  version: string;
+  type: DependencyType;
 }

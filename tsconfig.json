@@ -4,7 +4,8 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"outDir": "./dist",
-		"target": "es5"
+		"target": "es5",
+		"downlevelIteration": true
 	},
 	"include": [
 		"./src/"

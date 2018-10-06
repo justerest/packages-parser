@@ -1,11 +1,11 @@
 import fetch from 'node-fetch';
-import { PackageObject } from '../models/PackageObject';
+import { IPackageObject } from '../models/IPackageObject';
 import { parseText } from './parseText';
 
 /**
  * Parses `dependencies` and `devDependencies` fields from package.json of GitHub project.
  */
-export async function parseProject(path: string): Promise<PackageObject> {
+export async function parseProject(path: string): Promise<IPackageObject> {
   const link = path.replace('github', 'raw.githubusercontent')
     .replace(/\/*$/, '')
     .concat('/master/package.json');
