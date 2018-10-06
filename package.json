@@ -28,13 +28,13 @@
   "dependencies": {
     "chalk": "^2.4.1",
     "command-line-args": "^5.0.2",
-    "node-fetch": "^2.1.2"
+    "node-fetch": "^2.2.0"
   },
   "devDependencies": {
     "@types/command-line-args": "^5.0.0",
-    "@types/node": "^10.5.1",
-    "@types/node-fetch": "^2.1.1",
-    "tslint": "^5.10.0",
-    "typescript": "^2.9.2"
+    "@types/node": "^10.11.4",
+    "@types/node-fetch": "^2.1.2",
+    "tslint": "^5.11.0",
+    "typescript": "^3.1.1"
   }
 }
